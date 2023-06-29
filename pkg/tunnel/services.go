@@ -92,11 +92,10 @@ func RunInContainer(
 	}
 
 	// forward credentials to container
+	listener := agent.NewStdioListener(stdoutReader, stdinWriter, false)
 	_, err = agent.RunTunnelServer(
 		cancelCtx,
-		stdoutReader,
-		stdinWriter,
-		false,
+		listener,
 		gitCredentials,
 		dockerCredentials,
 		nil,

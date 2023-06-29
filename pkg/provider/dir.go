@@ -247,6 +247,10 @@ func LoadWorkspaceConfig(context, workspaceID string) (*Workspace, error) {
 		return nil, err
 	}
 
+	// FIXME: raw data doesn't match up! because it is looking into the agent dir
+	// definitely the wrong file content. Questions is: Did the agent overwrite it or did we write it wrong?
+	fmt.Println(string(workspaceConfigBytes))
+
 	workspaceConfig := &Workspace{}
 	err = json.Unmarshal(workspaceConfigBytes, workspaceConfig)
 	if err != nil {

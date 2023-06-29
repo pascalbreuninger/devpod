@@ -56,6 +56,9 @@ type MachineClient interface {
 
 	// MachineConfig returns the machine config
 	MachineConfig() *provider.Machine
+
+	// WorkspaceConfig returns the workspace config
+	WorkspaceConfig() *provider.Workspace
 }
 
 type WorkspaceClient interface {

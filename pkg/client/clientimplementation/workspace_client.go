@@ -241,7 +241,7 @@ func (s *workspaceClient) Create(ctx context.Context, options client.CreateOptio
 	}
 
 	// create machine client
-	machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+	machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log, WithWorkspace(s.workspace))
 	if err != nil {
 		return err
 	}
@@ -441,7 +441,7 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 			return client.StatusNotFound, nil
 		}
 
-		machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+		machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log, WithWorkspace(s.workspace))
 		if err != nil {
 			return client.StatusNotFound, err
 		}

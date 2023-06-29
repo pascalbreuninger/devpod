@@ -82,6 +82,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, true)
+
 	if err != nil {
 		err1 := clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, logger)
 		if err1 != nil {
@@ -104,11 +105,27 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 }
 
 func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, string, error) {
+	sockAddr := os.Getenv("DEVPOD_PROXY_SOCK")
+	var dialer agent.Dialer
+	if sockAddr != "" {
+		dialer = agent.NewSocketDialer(sockAddr)
+	} else {
+		dialer = agent.NewStdioDialer(os.Stdin, os.Stdout, true)
+	}
+
 	// create a grpc client
-	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
+	tunnelClient, err := agent.NewTunnelClient(dialer)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("error creating tunnel client: %w", err)
 	}
+
+	// FIXME: remove this
+	res, err := tunnelClient.Ping(ctx, &tunnel.Empty{})
+	if err != nil {
+		return nil, nil, "", errors.Wrap(err, "ping client")
+	}
+	fmt.Fprintf(os.Stderr, "Received ping response: %#v\n\n\n", res)
+	return nil, nil, "", errors.Wrap(err, "COMBO BREAKER")
 
 	// create debug logger
 	logger := agent.NewTunnelLogger(ctx, tunnelClient, debug)

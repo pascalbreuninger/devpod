@@ -178,11 +178,10 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	agentConfig := workspaceClient.AgentConfig()
 
 	// create container etc.
+	listener := agent.NewStdioListener(stdoutReader, stdinWriter, false)
 	_, err = agent.RunTunnelServer(
 		cancelCtx,
-		stdoutReader,
-		stdinWriter,
-		false,
+		listener,
 		string(agentConfig.InjectGitCredentials) == "true",
 		string(agentConfig.InjectDockerCredentials) == "true",
 		workspaceClient.WorkspaceConfig(),

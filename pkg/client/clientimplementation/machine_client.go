@@ -8,40 +8,66 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/proxycontext"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger) (client.MachineClient, error) {
+type MachineClientOption func(*machineClient) error
+
+func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger, opts ...MachineClientOption) (client.MachineClient, error) {
 	if !provider.IsMachineProvider() {
 		return nil, fmt.Errorf("provider '%s' is not a machine provider. Please use another provider", provider.Name)
 	} else if machine == nil {
 		return nil, fmt.Errorf("machine doesn't exist. Seems like it was deleted without the workspace being deleted")
 	}
 
-	return &machineClient{
+	client := &machineClient{
 		devPodConfig: devPodConfig,
 		config:       provider,
 		machine:      machine,
 		log:          log,
-	}, nil
+	}
+
+	for _, o := range opts {
+		if err := o(client); err != nil {
+			return nil, err
+		}
+	}
+
+	return client, nil
+}
+
+func WithWorkspace(workspace *provider.Workspace) MachineClientOption {
+	return func(c *machineClient) error {
+		if workspace != nil {
+			c.workspace = workspace
+		}
+		return nil
+	}
 }
 
 type machineClient struct {
 	devPodConfig *config.Config
 	config       *provider.ProviderConfig
 	machine      *provider.Machine
+	workspace    *provider.Workspace
 	log          log.Logger
 }
 
 func (s *machineClient) Provider() string {
 	return s.config.Name
+}
+
+func (s *machineClient) WorkspaceConfig() *provider.Workspace {
+	return s.workspace
 }
 
 func (s *machineClient) Machine() string {
@@ -92,12 +118,52 @@ func (s *machineClient) Create(ctx context.Context, options client.CreateOptions
 
 	// create a machine
 	s.log.Infof("Create machine '%s' with provider '%s'...", s.machine.ID, s.config.Name)
-	err := RunCommandWithBinaries(
+
+	currentContext := s.devPodConfig.Contexts[s.Context()]
+	pc := proxycontext.New(s.workspace, currentContext)
+
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go func() {
+		s.log.Infof("Starting tunnel server...")
+		defer s.log.Infof("Tunnel server stopped")
+		listener, err := agent.NewSocketListener(pc.SocketPath)
+		if err != nil {
+			s.log.Errorf("Error creating socket listener: %v", err)
+			return
+		}
+		defer listener.Close()
+
+		_, err = agent.RunTunnelServer(
+			cancelCtx,
+			listener,
+			string(s.config.Agent.InjectGitCredentials) == "true",
+			string(s.config.Agent.InjectDockerCredentials) == "true",
+			s.workspace,
+			nil,
+			s.log,
+		)
+		if err != nil {
+			s.log.Errorf("run tunnel machine", err)
+			return
+		}
+	}()
+
+	// FIXME: check length
+	splitted := strings.Split(s.config.Exec.Create[0], " ")
+	bProxyContext, err := proxycontext.Marshal(pc)
+	if err != nil {
+		return err
+	}
+	proxyFlag := fmt.Sprintf("--proxy-context '%s'", bProxyContext)
+	args := []string{strings.Join(append([]string{splitted[0]}, splitted[1], proxyFlag), " ")}
+	err = RunCommandWithBinaries(
 		ctx,
 		"create",
-		s.config.Exec.Create,
+		args,
 		s.machine.Context,
-		nil,
+		s.workspace,
 		s.machine,
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
@@ -122,11 +188,24 @@ func (s *machineClient) Start(ctx context.Context, options client.StartOptions) 
 	writer := s.log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
+	currentContext := s.devPodConfig.Contexts[s.Context()]
+	bProxyContext, err := proxycontext.Marshal(proxycontext.New(s.workspace, currentContext))
+	if err != nil {
+		return err
+	}
+
+	// FIXME: check length
+	splitted := strings.Split(s.config.Exec.Start[0], " ")
+
+	proxyFlag := fmt.Sprintf("--proxy-context '%s'", bProxyContext)
+	args := []string{strings.Join(append([]string{splitted[0]}, splitted[1], proxyFlag), " ")}
+
+	// wire up new tunnel client to machine if proxy provider
 	s.log.Infof("Starting machine '%s'...", s.machine.ID)
-	err := RunCommandWithBinaries(
+	err = RunCommandWithBinaries(
 		ctx,
 		"start",
-		s.config.Exec.Start,
+		args,
 		s.machine.Context,
 		nil,
 		s.machine,
@@ -205,7 +284,7 @@ func (s *machineClient) Status(ctx context.Context, options client.StatusOptions
 		"status",
 		s.config.Exec.Status,
 		s.machine.Context,
-		nil,
+		s.workspace,
 		s.machine,
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,

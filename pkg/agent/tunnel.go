@@ -31,22 +31,41 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool) (tunnel.TunnelClient, error) {
-	pipe := stdio.NewStdioStream(reader, writer, exitOnClose)
+type Dialer func(context.Context, string) (net.Conn, error)
 
-	// Set up a connection to the server.
-	conn, err := grpc.Dial("", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+func NewStdioDialer(reader io.Reader, writer io.WriteCloser, exitOnClose bool) Dialer {
+	return func(ctx context.Context, addr string) (net.Conn, error) {
+		pipe := stdio.NewStdioStream(reader, writer, exitOnClose)
 		return pipe, nil
-	}))
+	}
+}
+
+func NewSocketDialer(socketPath string) Dialer {
+	return func(ctx context.Context, addr string) (net.Conn, error) {
+		return net.Dial("unix", socketPath)
+	}
+}
+
+func NewTunnelClient(dialer Dialer) (tunnel.TunnelClient, error) {
+	// Set up a connection to the server.
+	conn, err := grpc.Dial("", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(dialer))
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("PROXY: created tunnel client")
 
 	return tunnel.NewTunnelClient(conn), nil
 }
 
-func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, forwarder netstat.Forwarder, log log.Logger) (*config.Result, error) {
-	lis := stdio.NewStdioListener(reader, writer, exitOnClose)
+func NewStdioListener(reader io.Reader, writer io.WriteCloser, exitOnClose bool) net.Listener {
+	return stdio.NewStdioListener(reader, writer, exitOnClose)
+}
+
+func NewSocketListener(socketPath string) (net.Listener, error) {
+	return net.Listen("unix", socketPath)
+}
+
+func RunTunnelServer(ctx context.Context, listener net.Listener, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, forwarder netstat.Forwarder, log log.Logger) (*config.Result, error) {
 	s := grpc.NewServer()
 	tunnelServ := &tunnelServer{
 		workspace:              workspace,
@@ -59,7 +78,7 @@ func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteClose
 	reflection.Register(s)
 	errChan := make(chan error, 1)
 	go func() {
-		errChan <- s.Serve(lis)
+		errChan <- s.Serve(listener)
 	}()
 
 	select {
@@ -67,6 +86,37 @@ func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteClose
 		return nil, err
 	case <-ctx.Done():
 		return tunnelServ.result, nil
+	}
+}
+
+func RunTunnelProxyServer(ctx context.Context, listener net.Listener, client tunnel.TunnelClient) error {
+	s := grpc.NewServer(grpc.UnaryInterceptor(
+		func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+			// TODO: can we make this more generic or generate it?
+			// TODO: Need to embed streaming server
+			fmt.Printf("handled: %s\n", info.FullMethod)
+			fmt.Printf("request: %#v\n", req)
+			switch info.FullMethod {
+			case "/tunnel.Tunnel/Ping":
+				return client.Ping(ctx, req.(*tunnel.Empty))
+			}
+
+			return nil, errors.New("unknown method")
+
+		},
+	))
+	tunnelServ := &tunnelServer{}
+	tunnel.RegisterTunnelServer(s, tunnelServ)
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- s.Serve(listener)
+	}()
+
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		return nil
 	}
 }
 

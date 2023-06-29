@@ -236,6 +236,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 
 	// create container etc.
 	log.Infof("Creating devcontainer...")
+	log.Infof("DEVPOD_FLAG=", os.Getenv("DEVPOD_FLAG"))
 	defer log.Debugf("Done creating devcontainer")
 	command := fmt.Sprintf("'%s' agent workspace up --workspace-info '%s'", client.AgentPath(), workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
@@ -247,6 +248,8 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	if cmd.Recreate {
 		command += " --recreate"
 	}
+
+	// TODO: this could be wired up to the parent's process stdin/stdout/stderr
 
 	// create pipes
 	stdoutReader, stdoutWriter, err := os.Pipe()
@@ -274,6 +277,8 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 
 		log.Debugf("Inject and run command: %s", command)
 		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			l := log.ErrorStreamOnly()
+			l.Warn("Executing command in devcontainer...", command)
 			return client.Command(ctx, client2.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
@@ -287,11 +292,10 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	agentConfig := client.AgentConfig()
 
 	// create container etc.
+	listener := agent.NewStdioListener(stdoutReader, stdinWriter, false)
 	result, err := agent.RunTunnelServer(
 		cancelCtx,
-		stdoutReader,
-		stdinWriter,
-		false,
+		listener,
 		string(agentConfig.InjectGitCredentials) == "true",
 		string(agentConfig.InjectDockerCredentials) == "true",
 		client.WorkspaceConfig(),

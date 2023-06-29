@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -287,7 +288,7 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspace
 			}
 
 			// create machine
-			machineClient, err := clientimplementation.NewMachineClient(devPodConfig, provider.Config, machineConfig, log)
+			machineClient, err := clientimplementation.NewMachineClient(devPodConfig, provider.Config, machineConfig, log, clientimplementation.WithWorkspace(workspace))
 			if err != nil {
 				_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
 				return nil, nil, nil, err
@@ -520,6 +521,11 @@ func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, chan
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	// TODO: CONTINUE HERE
+
+	fmt.Println(os.Getenv("DEVPOD_FLAG"))
+	x, _ := json.MarshalIndent(workspaceConfig, "", "  ")
+	fmt.Printf("Using workspace %s\n", x)
 
 	providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
 	if err != nil {

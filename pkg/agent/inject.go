@@ -60,6 +60,8 @@ func InjectAgentAndExecute(
 ) error {
 	// should execute locally?
 	if local {
+
+		log.Warn("inject.go", command)
 		if command == "" {
 			return nil
 		}

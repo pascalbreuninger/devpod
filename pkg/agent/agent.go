@@ -185,7 +185,8 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 	// check if workspace config already exists
 	workspaceConfig := filepath.Join(workspaceDir, provider2.WorkspaceConfigFile)
 	oldWorkspaceInfo, _ := parseAgentWorkspaceInfo(workspaceConfig)
-	if oldWorkspaceInfo != nil && oldWorkspaceInfo.Workspace.UID != workspaceInfo.Workspace.UID {
+
+	if oldWorkspaceInfo != nil && oldWorkspaceInfo.Workspace != nil && oldWorkspaceInfo.Workspace.UID != workspaceInfo.Workspace.UID {
 		// delete the old workspace
 		log.Infof("Delete old workspace '%s'", oldWorkspaceInfo.Workspace.ID)
 		err = deleteWorkspace(oldWorkspaceInfo, log)

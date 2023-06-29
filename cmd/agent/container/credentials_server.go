@@ -53,7 +53,7 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	// create a grpc client
-	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
+	tunnelClient, err := agent.NewTunnelClient(agent.NewStdioDialer(os.Stdin, os.Stdout, true))
 	if err != nil {
 		return fmt.Errorf("error creating tunnel client: %w", err)
 	}
