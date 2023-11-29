@@ -603,3 +603,50 @@ body .markdown {
 .pagination-nav__link {
   height: auto;
 }
+
+/* --- */
+/* The slider */
+.pro-flex-container {
+  margin-top: 1em;
+
+  display: flex;
+  background-color: #f2f2f2;
+
+  border-style: solid;
+  border-color: #e1e1e1;
+  border-width: 1px;
+
+  border-radius: 4px;
+}
+
+[data-theme="dark"] .pro-flex-container {
+  background-color: #272729;
+  border-color: #444950;
+}
+
+.pro-flex-container > a {
+  margin: 6px;
+  padding: 4px;
+  width: 50%;
+  text-align: center;
+  font-weight: 500;
+  color: black;
+
+  font-weight: 500;
+}
+
+.pro-flex-container > a.selected {
+  background-color: #ba50ff;
+  color: white;
+  border-radius: 4px;
+
+  font-weight: bolder;
+}
+
+[data-theme="dark"] .pro-flex-container > a {
+  color: white;
+}
+
+[data-theme="dark"] .pro-flex-container > a.selected {
+  color: black;
+}

@@ -8,6 +8,20 @@
 module.exports = {
   adminSidebar: [
     {
+      type: "html",
+      value: `
+              <div class="pro-flex-container">
+                  <a href="/docs/" class="selected">
+                    Open Source
+                  </a>
+
+                  <a href="/pro/docs/">
+                    Pro
+                  </a>
+              </div>
+            `,
+    },
+    {
       type: "doc",
       id: "what-is-devpod",
     },
