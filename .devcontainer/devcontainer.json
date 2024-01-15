@@ -8,6 +8,11 @@
       "version": "latest"
     }
   },
+  "customizations": {
+    "devpod": {
+      "prebuildRepository": "ghcr.io/pascalbreuninger/devpod"
+    }
+  },
   "mounts": [
     {
       "type": "volume",
