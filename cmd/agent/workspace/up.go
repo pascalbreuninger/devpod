@@ -69,7 +69,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return nil
 	}
 
-	// make sure daemon does shut us down while we are doing things
+	// make sure daemon doesn't shut us down while we are doing things
 	agent.CreateWorkspaceBusyFile(workspaceInfo.Origin)
 	defer agent.DeleteWorkspaceBusyFile(workspaceInfo.Origin)
 
