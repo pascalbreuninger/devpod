@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -120,40 +119,40 @@ func CloneRepository(ctx context.Context, gitInfo *GitInfo, targetDir string, he
 
 	// If we keep a local copy of the repo in a shared directory and fetch the latest changes everytime we
 	// start a new workspace, we should be able to avoid the need to clone the repo everytime.
-	var (
-		didClone bool
-		err      error
-	)
-	log.Debugf("Cloning repository: %s", gitInfo.Repository)
-
-	err = os.MkdirAll(cacheDir, 0666)
-	if err != nil {
-		// TODO: log error
-		// can skip and fall back to full cloning
-		log.Debugf("Error creating cache directory: %s", err.Error())
-	}
-
-	repoDir := filepath.Join(cacheDir, normalizeRepositoryName(gitInfo.Repository))
-	if _, err := os.Stat(repoDir); err != nil {
-		if os.IsNotExist(err) {
-			log.Debugf("Repository not found in cache: %s", err.Error())
-			err := clone(ctx, gitInfo.Repository, repoDir, helper)
-			if err != nil {
-				return errors.Wrap(err, "cloning repository")
-			}
-			didClone = true
-		} else {
-			return errors.Wrap(err, "check repository cache")
-		}
-	}
-
-	if !didClone {
-		err = updateRepository(ctx, repoDir, helper)
-		if err != nil {
-			return errors.Wrap(err, "updating repository")
-		}
-	}
-	log.Debugf("Cloning after Cache: %s", gitInfo.Repository)
+	// var (
+	// 	didClone bool
+	// 	err      error
+	// )
+	// log.Debugf("Cloning repository: %s", gitInfo.Repository)
+	//
+	// err = os.MkdirAll(cacheDir, 0666)
+	// if err != nil {
+	// 	// TODO: log error
+	// 	// can skip and fall back to full cloning
+	// 	log.Debugf("Error creating cache directory: %s", err.Error())
+	// }
+	//
+	// repoDir := filepath.Join(cacheDir, normalizeRepositoryName(gitInfo.Repository))
+	// if _, err := os.Stat(repoDir); err != nil {
+	// 	if os.IsNotExist(err) {
+	// 		log.Debugf("Repository not found in cache: %s", err.Error())
+	// 		err := clone(ctx, gitInfo.Repository, repoDir, helper)
+	// 		if err != nil {
+	// 			return errors.Wrap(err, "cloning repository")
+	// 		}
+	// 		didClone = true
+	// 	} else {
+	// 		return errors.Wrap(err, "check repository cache")
+	// 	}
+	// }
+	//
+	// if !didClone {
+	// 	err = updateRepository(ctx, repoDir, helper)
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "updating repository")
+	// 	}
+	// }
+	// log.Debugf("Cloning after Cache: %s", gitInfo.Repository)
 
 	args := []string{"clone"}
 	if bare && gitInfo.Commit == "" {
@@ -166,11 +165,11 @@ func CloneRepository(ctx context.Context, gitInfo *GitInfo, targetDir string, he
 	if gitInfo.Branch != "" {
 		args = append(args, "--branch", gitInfo.Branch)
 	}
-	args = append(args, repoDir, targetDir)
+	args = append(args, gitInfo.Repository, targetDir)
 	gitCommand := CommandContext(ctx, args...)
 	gitCommand.Stdout = writer
 	gitCommand.Stderr = writer
-	err = gitCommand.Run()
+	err := gitCommand.Run()
 	if err != nil {
 		return errors.Wrap(err, "cloning repository")
 	}
