@@ -82,6 +82,8 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 
 type ExecFunc func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
+// TODO: Continue in this function with SSH investigation!
+
 func StartSSHSession(ctx context.Context, user, command string, agentForwarding bool, exec ExecFunc, stderr io.Writer) error {
 	// create readers
 	stdoutReader, stdoutWriter, err := os.Pipe()
