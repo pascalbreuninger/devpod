@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -16,15 +18,37 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.Reader, writer io.WriteCloser, log log.Logger, gitUsername, gitToken string) (*config.Result, error) {
-	lis := stdio.NewStdioListener(reader, writer, false)
-	s := grpc.NewServer()
+func RunProxyServerListening(ctx context.Context, client tunnel.TunnelClient, listener net.Listener, log log.Logger) (*config.Result, error) {
+	s := grpc.NewServer(grpc.UnaryInterceptor(LoggingInterceptor(log, false)))
 	tunnelServ := &proxyServer{
 		client: client,
 		log:    log,
+	}
+	tunnel.RegisterTunnelServer(s, tunnelServ)
+	reflection.Register(s)
+	errChan := make(chan error, 1)
+	go func() {
+		log.Info("Starting to serve proxy server")
+		errChan <- s.Serve(listener)
+	}()
 
-		gitUsername: gitUsername,
-		gitToken:    gitToken,
+	select {
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return tunnelServ.result, nil
+	}
+}
+
+func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.Reader, writer io.WriteCloser, configureDockerCredentials bool, gitUsername, gitToken string, log log.Logger, showLogs bool) (*config.Result, error) {
+	lis := stdio.NewStdioListener(reader, writer, false, "", nil, nil)
+	s := grpc.NewServer(grpc.UnaryInterceptor(LoggingInterceptor(log, showLogs)))
+	tunnelServ := &proxyServer{
+		client:                 client,
+		log:                    log,
+		allowDockerCredentials: configureDockerCredentials,
+		gitUsername:            gitUsername,
+		gitToken:               gitToken,
 	}
 	tunnel.RegisterTunnelServer(s, tunnelServ)
 	reflection.Register(s)
@@ -48,6 +72,8 @@ type proxyServer struct {
 	result *config.Result
 	log    log.Logger
 
+	allowDockerCredentials bool
+
 	gitUsername string
 	gitToken    string
 }
@@ -61,6 +87,9 @@ func (t *proxyServer) StopForwardPort(ctx context.Context, portRequest *tunnel.S
 }
 
 func (t *proxyServer) DockerCredentials(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	if !t.allowDockerCredentials {
+		return nil, fmt.Errorf("docker credentials forbidden")
+	}
 	return t.client.DockerCredentials(ctx, message)
 }
 
@@ -113,11 +142,14 @@ func (t *proxyServer) SendResult(ctx context.Context, result *tunnel.Message) (*
 }
 
 func (t *proxyServer) Ping(ctx context.Context, message *tunnel.Empty) (*tunnel.Empty, error) {
-	return t.client.Ping(ctx, message)
+	return &tunnel.Empty{}, nil
+	// return t.client.Ping(ctx, message)
 }
 
 func (t *proxyServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tunnel.Empty, error) {
-	return t.client.Log(ctx, message)
+	t.log.Debug(message)
+	return &tunnel.Empty{}, nil
+	// return t.client.Log(ctx, message)
 }
 
 func (t *proxyServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunnel_StreamGitCloneServer) error {
@@ -171,4 +203,24 @@ func (t *proxyServer) StreamMount(message *tunnel.StreamMountRequest, stream tun
 
 	// make sure buffer is flushed
 	return buf.Flush()
+}
+
+// LoggingInterceptor is a server interceptor for logging gRPC traffic
+func LoggingInterceptor(log log.Logger, showLogs bool) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		if showLogs {
+			// Log the incoming request
+			log.Infof("Received request: %s", info.FullMethod)
+			resp, err := handler(ctx, req)
+			if err != nil {
+				log.Errorf("Error in %s: %v", info.FullMethod, err)
+			} else {
+				log.Infof("Response data: %+v", resp)
+			}
+			return resp, err
+		} else {
+			resp, err := handler(ctx, req)
+			return resp, err
+		}
+	}
 }

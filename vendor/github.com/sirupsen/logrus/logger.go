@@ -76,12 +76,12 @@ func (mw *MutexWrap) Disable() {
 // `Out` and `Hooks` directly on the default logger instance. You can also just
 // instantiate your own:
 //
-//    var log = &logrus.Logger{
-//      Out: os.Stderr,
-//      Formatter: new(logrus.TextFormatter),
-//      Hooks: make(logrus.LevelHooks),
-//      Level: logrus.DebugLevel,
-//    }
+//	var log = &logrus.Logger{
+//	  Out: os.Stderr,
+//	  Formatter: new(logrus.TextFormatter),
+//	  Hooks: make(logrus.LevelHooks),
+//	  Level: logrus.DebugLevel,
+//	}
 //
 // It's recommended to make this a global instance called `log`.
 func New() *Logger {
@@ -149,11 +149,9 @@ func (logger *Logger) WithTime(t time.Time) *Entry {
 }
 
 func (logger *Logger) Logf(level Level, format string, args ...interface{}) {
-	if logger.IsLevelEnabled(level) {
-		entry := logger.newEntry()
-		entry.Logf(level, format, args...)
-		logger.releaseEntry(entry)
-	}
+	entry := logger.newEntry()
+	entry.Logf(level, format, args...)
+	logger.releaseEntry(entry)
 }
 
 func (logger *Logger) Tracef(format string, args ...interface{}) {
@@ -347,9 +345,9 @@ func (logger *Logger) Exit(code int) {
 	logger.ExitFunc(code)
 }
 
-//When file is opened with appending mode, it's safe to
-//write concurrently to a file (within 4k message on Linux).
-//In these cases user can choose to disable the lock.
+// When file is opened with appending mode, it's safe to
+// write concurrently to a file (within 4k message on Linux).
+// In these cases user can choose to disable the lock.
 func (logger *Logger) SetNoLock() {
 	logger.mu.Disable()
 }

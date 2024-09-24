@@ -13,7 +13,7 @@ import (
 )
 
 func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool, exitCode int) (tunnel.TunnelClient, error) {
-	pipe := stdio.NewStdioStream(reader, writer, exitOnClose, exitCode)
+	pipe := stdio.NewStdioStream(reader, writer, exitOnClose, exitCode, "", nil, nil)
 
 	// After moving from deprecated grpc.Dial to grpc.NewClient we need to setup resolver first
 	// https://github.com/grpc/grpc-go/issues/1786#issuecomment-2119088770
@@ -24,6 +24,26 @@ func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool, 
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			return pipe, nil
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	c := tunnel.NewTunnelClient(conn)
+
+	return c, nil
+}
+func NewTunnelClientWithConn(con net.Conn) (tunnel.TunnelClient, error) {
+	// After moving from deprecated grpc.Dial to grpc.NewClient we need to setup resolver first
+	// https://github.com/grpc/grpc-go/issues/1786#issuecomment-2119088770
+	resolver.SetDefaultScheme("passthrough")
+
+	// Set up a connection to the server.
+	conn, err := grpc.NewClient("",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			return con, nil
 		}),
 	)
 	if err != nil {

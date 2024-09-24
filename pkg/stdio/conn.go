@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/loft-sh/log"
 )
 
 // StdioStream is the struct that implements the net.Conn interface
@@ -16,10 +18,17 @@ type StdioStream struct {
 
 	exitOnClose bool
 	exitCode    int
+	log         log.Logger
+	label       string
+	done        chan<- struct{}
 }
 
 // NewStdioStream is used to implement the connection interface
-func NewStdioStream(in io.Reader, out io.WriteCloser, exitOnClose bool, exitCode int) *StdioStream {
+func NewStdioStream(in io.Reader, out io.WriteCloser, exitOnClose bool, exitCode int, label string, log log.Logger, done chan<- struct{}) *StdioStream {
+	if log != nil {
+		log.Info("[START] StdIO Stream")
+	}
+
 	return &StdioStream{
 		local:       NewStdinAddr("local"),
 		remote:      NewStdinAddr("remote"),
@@ -27,6 +36,9 @@ func NewStdioStream(in io.Reader, out io.WriteCloser, exitOnClose bool, exitCode
 		out:         out,
 		exitOnClose: exitOnClose,
 		exitCode:    exitCode,
+		log:         log,
+		label:       label,
+		done:        done,
 	}
 }
 

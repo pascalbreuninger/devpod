@@ -6,12 +6,13 @@ import (
 	"os"
 
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
 
 type Tunnel func(ctx context.Context, stdin io.Reader, stdout io.Writer) error
 
-func NewTunnel(ctx context.Context, tunnel Tunnel, handler Handler) error {
+func NewTunnel(ctx context.Context, tunnel Tunnel, handler Handler, log log.Logger) error {
 	// create context
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()

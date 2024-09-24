@@ -31,7 +31,12 @@ func NewFileLogger(logFile string, level logrus.Level) Logger {
 		logger: logrus.New(),
 		m:      &sync.Mutex{},
 	}
-	newLogger.logger.Formatter = &logrus.JSONFormatter{}
+	newLogger.logger.Formatter = &logrus.TextFormatter{
+		ForceColors:      true,
+		FullTimestamp:    false,
+		DisableQuote:     true,
+		DisableTimestamp: true,
+	}
 	newLogger.logger.SetOutput(&lumberjack.Logger{
 		Filename:   logFile,
 		MaxAge:     12,
@@ -66,10 +71,6 @@ func (f *fileLogger) Debug(args ...interface{}) {
 func (f *fileLogger) Debugf(format string, args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
-
-	if f.level < logrus.DebugLevel {
-		return
-	}
 
 	f.logger.Debugf(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }

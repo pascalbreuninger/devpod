@@ -5,10 +5,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
 
+	command2 "github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/log"
 )
@@ -91,7 +91,7 @@ func doProbe(ctx context.Context, userEnvProbe UserEnvProbe, preferredShell []st
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(timeoutCtx, args[0], args[1:]...)
+	cmd := command2.NewContext(timeoutCtx, args[0], args[1:]...)
 
 	err := PrepareProbe(cmd, userName)
 	if err != nil {

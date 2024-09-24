@@ -34,6 +34,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/pkg/version"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
@@ -73,24 +74,25 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "up",
 		Short: "Starts a new workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
-			// try to parse flags from env
-			err := mergeDevPodUpOptions(&cmd.CLIOptions)
+			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
 			}
-			err = mergeEnvFromFiles(&cmd.CLIOptions)
-			if err != nil {
-				return err
-			}
-
-			ctx := context.Background()
 			var logger log.Logger = log.Default
 			if cmd.Proxy {
 				logger = logger.ErrorStreamOnly()
-				logger.Debugf("Using error stream as --proxy is enabled")
+				logger.Debug("Running in proxy mode")
+				logger.Debug("Using error output stream")
+
+				// try to parse flags from env
+				if err := mergeDevPodUpOptions(&cmd.CLIOptions); err != nil {
+					return err
+				}
+				// merge context options from env
+				mergeContextOptions(devPodConfig.Current(), os.Environ())
 			}
 
-			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
+			err = mergeEnvFromFiles(&cmd.CLIOptions)
 			if err != nil {
 				return err
 			}
@@ -107,6 +109,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.SSHConfigPath = devPodConfig.ContextOption(config.ContextOptionSSHConfigPath)
 			}
 
+			ctx := context.Background()
 			client, err := workspace2.ResolveWorkspace(
 				ctx,
 				devPodConfig,
@@ -532,7 +535,7 @@ func (cmd *UpCmd) devPodUpMachine(
 					return nil, errors.Wrap(err, "create tunnel client")
 				}
 
-				return tunnelserver.RunProxyServer(ctx, tunnelClient, stdout, stdin, log, cmd.GitUsername, cmd.GitToken)
+				return tunnelserver.RunProxyServer(ctx, tunnelClient, stdout, stdin, true, cmd.GitUsername, cmd.GitToken, log, false)
 			}
 
 			return tunnelserver.RunUpServer(
@@ -789,6 +792,7 @@ func startBrowserTunnel(
 			<-ctx.Done()
 			return nil
 		},
+		logger,
 	)
 	if err != nil {
 		return err
@@ -1054,7 +1058,7 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 		"--command", command,
 	).Run()
 	if err != nil {
-		log.Error("failure in setting up Loft Platform access")
+		log.Error("failure in setting up pro access: %w", err)
 	}
 
 	return nil

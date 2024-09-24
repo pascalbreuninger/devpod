@@ -65,6 +65,7 @@ func InjectAgentAndExecute(
 		if command == "" {
 			return nil
 		}
+		log.Info("EXECUTING LOCALLY")
 
 		log.Debugf("Execute command locally")
 		return shell.ExecuteCommandWithShell(ctx, command, stdin, stdout, stderr, nil)

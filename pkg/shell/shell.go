@@ -31,15 +31,17 @@ func ExecuteCommandWithShell(
 
 	// try to find a proper shell
 	if runtime.GOOS != "windows" {
+		shell := ""
 		if command2.Exists("bash") {
-			cmd := exec.CommandContext(ctx, "bash", "-c", command)
-			cmd.Stdin = stdin
-			cmd.Stdout = stdout
-			cmd.Stderr = stderr
-			cmd.Env = environ
-			return cmd.Run()
+			shell = "bash"
 		} else if command2.Exists("sh") {
-			cmd := exec.CommandContext(ctx, "sh", "-c", command)
+			shell = "sh"
+		}
+
+		if shell != "" {
+			f, _ := os.OpenFile("/tmp/cmd.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0666)
+			fmt.Fprintf(f, "[EXEC] command: \"%s\"\n", command)
+			cmd := command2.NewContext(ctx, shell, "-c", command)
 			cmd.Stdin = stdin
 			cmd.Stdout = stdout
 			cmd.Stderr = stderr
@@ -48,7 +50,6 @@ func ExecuteCommandWithShell(
 		}
 	}
 
-	// run emulated shell
 	return RunEmulatedShell(ctx, command, stdin, stdout, stderr, environ)
 }
 

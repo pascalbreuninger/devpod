@@ -57,6 +57,7 @@ func ExecuteCommand(
 
 		log.Debugf("Inject and run command: %s", sshCommand)
 		err := agentInject(ctx, sshCommand, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
+		log.Info("Agent inject err: %v", err)
 		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
 			errChan <- fmt.Errorf("executing agent command: %w", err)
 		} else {

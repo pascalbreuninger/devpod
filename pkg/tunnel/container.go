@@ -19,13 +19,14 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logger) *ContainerHandler {
+func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logger, log2 log.Logger) *ContainerHandler {
 	updateConfigInterval := time.Second * 30
 	return &ContainerHandler{
 		client:               client,
 		updateConfigInterval: updateConfigInterval,
 		proxy:                proxy,
 		log:                  log,
+		log2:                 log2,
 	}
 }
 
@@ -34,6 +35,7 @@ type ContainerHandler struct {
 	updateConfigInterval time.Duration
 	proxy                bool
 	log                  log.Logger
+	log2                 log.Logger
 }
 
 type Handler func(ctx context.Context, containerClient *ssh.Client) error
@@ -43,9 +45,13 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		return nil
 	}
 
+	c.log2.Info("Starting up container handler")
 	// create context
 	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	defer func() {
+		c.log2.Info("Shutting down containerhandler")
+		cancel()
+	}()
 
 	// create readers
 	stdoutReader, stdoutWriter, err := os.Pipe()
@@ -69,13 +75,21 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		defer writer.Close()
 		defer c.log.Debugf("Tunnel to host closed")
 
-		command := fmt.Sprintf("'%s' helper ssh-server --stdio", c.client.AgentPath())
+		c.log2.Info("[START] tunnel ssh-server")
+		defer c.log2.Info("[END] tunnel ssh-server")
+
+		command := fmt.Sprintf("'%s' helper ssh-server --stdio --address 127.0.0.1:1234", c.client.AgentPath())
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
 		tunnelChan <- agent.InjectAgentAndExecute(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				defer func() {
+					c.log2.Info("****************")
+					c.log2.Info("done executing command")
+				}()
+
 				return c.client.Command(ctx, client.CommandOptions{
 					Command: command,
 					Stdin:   stdin,
@@ -124,8 +138,10 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 	// wait for result
 	select {
 	case err := <-containerChan:
+		c.log2.Infof("ContainerChan closed: %v", err)
 		return errors.Wrap(err, "tunnel to container")
 	case err := <-tunnelChan:
+		c.log2.Infof("TunnelChan closed: %v", err)
 		return errors.Wrap(err, "connect to server")
 	}
 }
@@ -171,6 +187,9 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 }
 
 func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
+	c.log2.Info("[START] runRunInContainer")
+	defer c.log2.Info("[END] runRunInContainer")
+
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 	if err != nil {
@@ -195,13 +214,13 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 
 	// tunnel to container
 	go func() {
-		writer := c.log.Writer(logrus.InfoLevel, false)
+		writer := c.log2.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 		defer stdoutWriter.Close()
 		defer cancel()
 
-		c.log.Debugf("Run container tunnel")
-		defer c.log.Debugf("Container tunnel exited")
+		c.log2.Infof("[START] agent container-tunnel")
+		defer c.log2.Infof("[END] agent container-tunnel")
 
 		command := fmt.Sprintf("'%s' agent container-tunnel --workspace-info '%s'", c.client.AgentPath(), workspaceInfo)
 		if c.log.GetLevel() == logrus.DebugLevel {
@@ -219,8 +238,9 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 	if err != nil {
 		return err
 	}
+	c.log2.Infof("[START %s] opened container client", time.Now().Format(time.StampMilli))
+	defer c.log2.Infof("[END %s] opened container client", time.Now().Format(time.StampMilli))
 	defer containerClient.Close()
-	c.log.Debugf("Successfully connected to container")
 
 	// start handler
 	return runInContainer(cancelCtx, containerClient)

@@ -41,16 +41,16 @@ func RunInContainer(
 	log log.Logger,
 ) error {
 	// calculate exit after timeout
-	exitAfterTimeout := time.Second * 5
-	if devPodConfig.ContextOption(config.ContextOptionExitAfterTimeout) != "true" {
-		exitAfterTimeout = 0
-	}
+	// exitAfterTimeout := time.Second * 5
+	// if devPodConfig.ContextOption(config.ContextOptionExitAfterTimeout) != "true" {
+	// 	exitAfterTimeout = 0
+	// }
 
 	// forward ports
-	forwardedPorts, err := forwardDevContainerPorts(ctx, containerClient, extraPorts, exitAfterTimeout, log)
-	if err != nil {
-		return errors.Wrap(err, "forward ports")
-	}
+	// forwardedPorts, err := forwardDevContainerPorts(ctx, containerClient, extraPorts, exitAfterTimeout, log)
+	// if err != nil {
+	// 	return errors.Wrap(err, "forward ports")
+	// }
 
 	configureDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
 	configureGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
@@ -84,7 +84,7 @@ func RunInContainer(
 		// create a port forwarder
 		var forwarder netstat.Forwarder
 		if forwardPorts {
-			forwarder = newForwarder(containerClient, append(forwardedPorts, fmt.Sprintf("%d", openvscode.DefaultVSCodePort)), log)
+			forwarder = newForwarder(containerClient, append([]string{}, fmt.Sprintf("%d", openvscode.DefaultVSCodePort)), log)
 		}
 
 		errChan := make(chan error, 1)
@@ -164,43 +164,43 @@ func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, 
 	forwardedPorts := []string{}
 
 	// extra ports
-	for _, port := range extraPorts {
-		forwardedPorts = append(forwardedPorts, forwardPort(ctx, containerClient, port, exitAfterTimeout, log)...)
-	}
-
-	// app ports
-	for _, port := range result.MergedConfig.AppPort {
-		forwardedPorts = append(forwardedPorts, forwardPort(ctx, containerClient, port, 0, log)...)
-	}
+	// for _, port := range extraPorts {
+	// 	forwardedPorts = append(forwardedPorts, forwardPort(ctx, containerClient, port, exitAfterTimeout, log)...)
+	// }
+	//
+	// // app ports
+	// for _, port := range result.MergedConfig.AppPort {
+	// 	forwardedPorts = append(forwardedPorts, forwardPort(ctx, containerClient, port, 0, log)...)
+	// }
 
 	// forward ports
-	for _, port := range result.MergedConfig.ForwardPorts {
-		// convert port
-		host, portNumber, err := parseForwardPort(port)
-		if err != nil {
-			log.Debugf("Error parsing forwardPort %s: %v", port, err)
-		}
-
-		// try to forward
-		go func(port string) {
-			log.Debugf("Forward port %s", port)
-			err = devssh.PortForward(
-				ctx,
-				containerClient,
-				"tcp",
-				fmt.Sprintf("localhost:%d", portNumber),
-				"tcp",
-				fmt.Sprintf("%s:%d", host, portNumber),
-				0,
-				log,
-			)
-			if err != nil {
-				log.Debugf("Error port forwarding %s: %v", port, err)
-			}
-		}(port)
-
-		forwardedPorts = append(forwardedPorts, port)
-	}
+	// for _, port := range result.MergedConfig.ForwardPorts {
+	// 	// convert port
+	// 	host, portNumber, err := parseForwardPort(port)
+	// 	if err != nil {
+	// 		log.Debugf("Error parsing forwardPort %s: %v", port, err)
+	// 	}
+	//
+	// 	// try to forward
+	// 	go func(port string) {
+	// 		log.Debugf("Forward port %s", port)
+	// 		err = devssh.PortForward(
+	// 			ctx,
+	// 			containerClient,
+	// 			"tcp",
+	// 			fmt.Sprintf("localhost:%d", portNumber),
+	// 			"tcp",
+	// 			fmt.Sprintf("%s:%d", host, portNumber),
+	// 			0,
+	// 			log,
+	// 		)
+	// 		if err != nil {
+	// 			log.Debugf("Error port forwarding %s: %v", port, err)
+	// 		}
+	// 	}(port)
+	//
+	// 	forwardedPorts = append(forwardedPorts, port)
+	// }
 
 	return forwardedPorts, nil
 }

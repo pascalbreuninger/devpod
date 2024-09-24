@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/log"
@@ -19,6 +22,7 @@ import (
 	perrors "github.com/pkg/errors"
 	"github.com/pkg/sftp"
 	"github.com/sirupsen/logrus"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 var DefaultPort = 8022
@@ -139,10 +143,10 @@ func (s *Server) handler(sess ssh.Session) {
 	// start shell session
 	var err error
 	if isPty {
-		s.log.Debugf("Execute SSH server PTY command: %s", strings.Join(cmd.Args, " "))
-		err = HandlePTY(sess, ptyReq, winCh, cmd, nil)
+		// s.log.Debugf("Execute SSH server PTY command: %s", strings.Join(cmd.Args, " "))
+		err = HandlePTY(sess, ptyReq, winCh, cmd, nil, s.log)
 	} else {
-		s.log.Debugf("Execute SSH server command: %s", strings.Join(cmd.Args, " "))
+		// s.log.Debugf("Execute SSH server command: %s", strings.Join(cmd.Args, " "))
 		err = s.HandleNonPTY(sess, cmd)
 	}
 
@@ -216,6 +220,7 @@ func HandlePTY(
 	winCh <-chan ssh.Window,
 	cmd *exec.Cmd,
 	decorateReader func(reader io.Reader) io.Reader,
+	log log.Logger,
 ) (err error) {
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
 	f, err := startPTY(cmd)
@@ -255,7 +260,11 @@ func HandlePTY(
 	if err != nil {
 		return err
 	}
+	if cmd.ProcessState != nil {
+		log.Infof("[%s] handle pty exit: %s", time.Now().Format(time.StampMilli), cmd.ProcessState.ExitCode())
+	}
 
+	// SUS!
 	select {
 	case <-stdoutDoneChan:
 	case <-time.After(time.Second):
@@ -287,6 +296,8 @@ func (s *Server) getCommand(sess ssh.Session, isPty bool) *exec.Cmd {
 			args = append(args, "-c", sess.RawCommand())
 		}
 
+		h, _ := os.Hostname()
+		s.log.Infof("[%s] EXECUTING WITH SU: %s", h, cmd.String())
 		cmd = exec.Command("su", args...)
 	} else {
 		args := []string{}
@@ -301,6 +312,8 @@ func (s *Server) getCommand(sess ssh.Session, isPty bool) *exec.Cmd {
 			args = append(args, "-c", sess.RawCommand())
 			cmd = exec.Command(s.shell[0], args...)
 		}
+		h, _ := os.Hostname()
+		s.log.Infof("[%s] EXECUTING WITH SHELL: %s ", h, cmd.String())
 	}
 
 	var workdir string
@@ -401,7 +414,254 @@ func (s *Server) Serve(listener net.Listener) error {
 	return s.sshServer.Serve(listener)
 }
 
+func (s *Server) Close() error {
+	return s.sshServer.Close()
+}
+
 func (s *Server) ListenAndServe() error {
 	s.log.Debugf("Start ssh server on %s", s.sshServer.Addr)
 	return s.sshServer.ListenAndServe()
+}
+
+type ProxyServer struct {
+	*Server
+
+	containerClient *gossh.Client
+}
+
+func NewProxyServer(workdir string, containerClient *gossh.Client, log log.Logger) (*ProxyServer, error) {
+	sh, err := shell.GetShell("")
+	if err != nil {
+		return nil, err
+	}
+
+	currentUser, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+
+	forwardHandler := &ssh.ForwardedTCPHandler{}
+	forwardedUnixHandler := &ssh.ForwardedUnixHandler{}
+	server := &Server{
+		shell:       sh,
+		workdir:     workdir,
+		log:         log,
+		currentUser: currentUser.Username,
+		sshServer: ssh.Server{
+			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
+				log.Debugf("Accepted forward: %s:%d", dhost, dport)
+				return true
+			},
+			ReversePortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
+				log.Debugf("attempt to bind %s:%d - %s", host, port, "granted")
+				return true
+			},
+			ReverseUnixForwardingCallback: func(ctx ssh.Context, socketPath string) bool {
+				log.Debugf("attempt to bind socket %s", socketPath)
+
+				_, err := os.Stat(socketPath)
+				if err == nil {
+					log.Debugf("%s already exists, removing", socketPath)
+
+					_ = os.Remove(socketPath)
+				}
+
+				return true
+			},
+			ChannelHandlers: map[string]ssh.ChannelHandler{
+				"direct-tcpip":                   ssh.DirectTCPIPHandler,
+				"direct-streamlocal@openssh.com": ssh.DirectStreamLocalHandler,
+				"session":                        ssh.DefaultSessionHandler,
+			},
+			RequestHandlers: map[string]ssh.RequestHandler{
+				"tcpip-forward":                          forwardHandler.HandleSSHRequest,
+				"streamlocal-forward@openssh.com":        forwardedUnixHandler.HandleSSHRequest,
+				"cancel-streamlocal-forward@openssh.com": forwardedUnixHandler.HandleSSHRequest,
+				"cancel-tcpip-forward":                   forwardHandler.HandleSSHRequest,
+			},
+			SubsystemHandlers: map[string]ssh.SubsystemHandler{
+				"sftp": func(s ssh.Session) {
+					SftpHandler(s, currentUser.Username, log)
+				},
+			},
+		},
+	}
+	proxy := &ProxyServer{
+		Server:          server,
+		containerClient: containerClient,
+	}
+
+	log.Infof("Setup proxy ssh server for user %s in workdir %s", currentUser.Username, workdir)
+	server.sshServer.Handler = proxy.proxyHandler
+	return proxy, nil
+}
+
+func (s *ProxyServer) proxyHandler(sess ssh.Session) {
+	containerSess, err := s.containerClient.NewSession()
+	if err != nil {
+		s.log.Errorf("failed to establish remote connection: %w", err)
+		return
+	}
+	// why does this never get invoked?
+	defer func() {
+		if err := containerSess.Close(); err != nil {
+			s.log.Errorf("close container session: %v", err)
+		}
+	}()
+
+	// if strings.Contains(sess.RawCommand(), "agent container credentials-server") {
+	// 	s.interceptCredentialsServer(sess, containerSess)
+	// 	return
+	// }
+
+	stdinPipe, err := containerSess.StdinPipe()
+	if err != nil {
+		s.log.Errorf("failed to create remote stdin pipe: %v", err)
+		return
+	}
+	stdoutPipe, err := containerSess.StdoutPipe()
+	if err != nil {
+		s.log.Errorf("failed to create remote stdout pipe: %v", err)
+		return
+	}
+	stderrPipe, err := containerSess.StderrPipe()
+	if err != nil {
+		s.log.Errorf("failed to create remote stderr pipe: %v", err)
+		return
+	}
+
+	errChan := make(chan error, 4)
+	go func() {
+		defer stdinPipe.Close()
+		_, err := io.Copy(stdinPipe, sess)
+		if err != nil && err != io.EOF {
+			errChan <- fmt.Errorf("host stdin -> remote stdin: %w", err)
+		}
+	}()
+	go func() {
+		_, err := io.Copy(sess, stdoutPipe)
+		if err != nil && err != io.EOF {
+			errChan <- fmt.Errorf("remote stdout -> host stdout: %w", err)
+		}
+	}()
+	go func() {
+		_, err := io.Copy(sess.Stderr(), stderrPipe)
+		if err != nil && err != io.EOF {
+			errChan <- fmt.Errorf("remote stderr -> host stderr: %w", err)
+		}
+	}()
+
+	// Handle pty requests
+	ptyReq, winCh, isPty := sess.Pty()
+	if isPty {
+		err = containerSess.RequestPty(ptyReq.Term, ptyReq.Window.Height, ptyReq.Window.Width, gossh.TerminalModes{})
+		if err != nil {
+			s.log.Errorf("failed to request pty: %v", err)
+			return
+		}
+		go func() {
+			for win := range winCh {
+				if err := containerSess.WindowChange(win.Height, win.Width); err != nil {
+					s.log.Errorf("change window: %v", err)
+				}
+			}
+		}()
+	}
+	err = containerSess.Start(sess.RawCommand())
+	if err != nil {
+		return
+	}
+
+	go func() {
+		err := containerSess.Wait()
+		if err != nil {
+			errChan <- fmt.Errorf("run remote session: %w", err)
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	err = <-errChan
+	s.log.Info("Chan closed: %v", err)
+
+	// TODO: Why do I need to exit the session
+
+}
+
+func (s *ProxyServer) interceptCredentialsServer(hostSess ssh.Session, containerSess *gossh.Session) {
+	tunnelStdinReader, tunnelStdinWriter, err := os.Pipe()
+	if err != nil {
+		s.log.Errorf("failed to create pipe: %v", err)
+		return
+	}
+	tunnelStdoutReader, tunnelStdoutWriter, err := os.Pipe()
+	if err != nil {
+		s.log.Errorf("failed to create pipe: %v", err)
+		return
+	}
+	defer tunnelStdinWriter.Close()
+	defer tunnelStdoutWriter.Close()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if _, err := io.Copy(tunnelStdinWriter, hostSess); err != nil {
+			s.log.Errorf("copy host session to tunnel stdin: %v", err)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if _, err := io.Copy(hostSess, tunnelStdoutReader); err != nil {
+			s.log.Errorf("copy tunnel stdout to host session: %v", err)
+		}
+	}()
+	err = containerSess.Start(hostSess.RawCommand())
+	if err != nil {
+		s.log.Errorf("failed to start session: %v", err)
+		return
+	}
+
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		s.log.Errorf("failed to create pipe: %v", err)
+		return
+	}
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		s.log.Errorf("failed to create pipe: %v", err)
+		return
+	}
+	defer stdinWriter.Close()
+	defer stdoutWriter.Close()
+	go func() {
+		tunnelClient, err := tunnelserver.NewTunnelClient(tunnelStdinReader, tunnelStdoutWriter, false, 1)
+		if err != nil {
+			s.log.Errorf("Failed to create tunnel client: %v", err)
+			return
+		}
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
+		_, err = tunnelClient.Ping(timeoutCtx, &tunnel.Empty{})
+		if err != nil {
+			s.log.Errorf("Failed to create tunnel client: %v", err)
+			return
+		}
+		s.log.Info("Successfully received pong")
+		res, err := tunnelserver.RunProxyServer(context.Background(), tunnelClient, stdoutReader, stdinWriter, false, "", "", s.log, true)
+
+		if err != nil {
+			s.log.Error("proxy server failed")
+		}
+		_ = res
+	}()
+
+	containerSess.Stdin = stdinReader
+	containerSess.Stdout = stdoutWriter
+	containerSess.Stderr = hostSess.Stderr()
+
+	wg.Wait()
+	err = containerSess.Wait()
+	// always close session
+	s.exitWithError(hostSess, err)
 }

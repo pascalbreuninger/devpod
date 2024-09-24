@@ -91,7 +91,7 @@ type gitCredentialsOverride struct {
 }
 
 func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writer io.WriteCloser) (*config.Result, error) {
-	lis := stdio.NewStdioListener(reader, writer, false)
+	lis := stdio.NewStdioListener(reader, writer, false, "", nil, nil)
 	s := grpc.NewServer()
 	tunnel.RegisterTunnelServer(s, t)
 	reflection.Register(s)

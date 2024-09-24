@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -23,13 +24,20 @@ import (
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	helperssh "github.com/loft-sh/devpod/pkg/ssh/server"
+	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
+	loftlog "github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
+)
+
+var (
+	fileL loftlog.Logger
 )
 
 // SSHCmd holds the ssh cmd flags
@@ -114,6 +122,25 @@ func (cmd *SSHCmd) Run(
 			log.Debugf("Error adding private keys to ssh-agent: %v", err)
 		}
 	}
+	if cmd.Proxy {
+		h, err := os.Hostname()
+		if err != nil {
+			return err
+		}
+		u, _ := user.Current()
+		log.Debugf("user: %s", u.Username)
+		f, err := os.OpenFile("/tmp/devpod.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
+		if err != nil {
+			log.Errorf("failed to setup file logger", err)
+			return fmt.Errorf("Create log file: %w", err)
+		}
+		// defer f.Close()
+		fileL = loftlog.NewFileLogger(f.Name(), logrus.TraceLevel)
+		fileL.Info("")
+		fileL.Info("*********************")
+		fileL.Infof("[%s] Starting new session", time.Now().Format(time.TimeOnly))
+		fileL.Infof("Running ssh connection on %s", h)
+	}
 
 	// get user
 	if cmd.User == "" {
@@ -154,6 +181,8 @@ func (cmd *SSHCmd) startProxyTunnel(
 	return tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
+			h, _ := os.Hostname()
+			log.Debugf("[%s] starting outer ssh tunnel", h)
 			return client.Ssh(ctx, client2.SshOptions{
 				User:   cmd.User,
 				Stdin:  stdin,
@@ -161,8 +190,11 @@ func (cmd *SSHCmd) startProxyTunnel(
 			})
 		},
 		func(ctx context.Context, containerClient *ssh.Client) error {
+			h, _ := os.Hostname()
+			log.Debugf("[%s] starting inner ssh tunnel", h)
 			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
 		},
+		log,
 	)
 }
 
@@ -232,8 +264,13 @@ func (cmd *SSHCmd) jumpContainer(
 		return err
 	}
 
+	if fileL != nil {
+		h, _ := os.Hostname()
+		fileL.Infof("[%s] jump container", h)
+	}
+
 	// tunnel to container
-	return tunnel.NewContainerTunnel(client, cmd.Proxy, log).
+	return tunnel.NewContainerTunnel(client, cmd.Proxy, log, fileL).
 		Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
 			// we have a connection to the container, make sure others can connect as well
 			unlockOnce.Do(client.Unlock)
@@ -380,7 +417,6 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 			}
 		}
 	}
-
 	workdir := filepath.Join("/workspaces", workspaceName)
 	if cmd.WorkDir != "" {
 		workdir = cmd.WorkDir
@@ -400,6 +436,27 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		if cmd.Proxy {
 			go cmd.startProxyServices(ctx, devPodConfig, containerClient, log)
 		}
+
+		// fileL.Infof("Forwarding ssh connection, proxy: %t, stdio: %t", cmd.Proxy, cmd.Stdio)
+		// fileL.Infof("Attempting to proxy traffic")
+
+		lis := stdio.NewStdioListener(os.Stdin, os.Stdout, false)
+		cwd, err := os.Getwd()
+		if err != nil {
+			fileL.Errorf("get current working directory: %w", err)
+			return err
+		}
+		server, err := helperssh.NewProxyServer(cwd, containerClient, fileL.ErrorStreamOnly())
+		if err != nil {
+			fileL.Errorf("failed to create server: %w", err)
+			return err
+		}
+		// commands should be executed with containerClient
+		if err = server.Serve(lis); err != nil {
+			fileL.Errorf("failed to start server: %w", err)
+			return err
+		}
+		return nil
 
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
 	}

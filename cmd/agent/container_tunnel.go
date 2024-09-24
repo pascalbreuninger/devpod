@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/loft-sh/devpod/cmd/agent/workspace"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -17,10 +18,12 @@ import (
 	"github.com/loft-sh/devpod/pkg/encoding"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
+	logpkg "github.com/loft-sh/log"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-// ContainerTunnelCmd holds the ws-tunnel cmd flags
+// ContainerTunnelCmd holds the container tunnel cmd flags
 type ContainerTunnelCmd struct {
 	*flags.GlobalFlags
 
@@ -58,6 +61,16 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 		return nil
 	}
 
+	f, err := os.CreateTemp("", "container-tunnel.*.log")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	fLog := logpkg.NewFileLogger(f.Name(), logrus.TraceLevel)
+	fLog.Info("*************************")
+	fLog.Info("[START] container-tunnel")
+	defer fLog.Info("[END] container-tunnel")
+
 	// make sure content folder exists
 	_, err = workspace.InitContentFolder(workspaceInfo, log)
 	if err != nil {
@@ -70,8 +83,9 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 		return err
 	}
 
-	// wait until devcontainer is started
+	// // wait until devcontainer is started
 	err = startDevContainer(ctx, workspaceInfo, runner, log)
+	fLog.Error(err)
 	if err != nil {
 		return err
 	}
@@ -80,9 +94,20 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP)
 	go func() {
-		<-sigs
+		sig := <-sigs
+		fLog.Info("Received signal: %s", sig.String())
 		os.Exit(0)
 	}()
+
+	go func() {
+		for {
+			fLog.Info(time.Now().Format(time.TimeOnly))
+			time.Sleep(time.Second * 10)
+		}
+	}()
+
+	log.Info("[START] container-tunnel")
+	defer log.Info("[END] container-tunnel")
 
 	// create tunnel into container.
 	err = agent.Tunnel(

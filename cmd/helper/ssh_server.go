@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/ssh"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -50,45 +51,32 @@ func NewSSHServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
+func (cmd *SSHServerCmd) Run(cobraCmd *cobra.Command, _ []string) error {
 	var (
 		keys    []ssh.PublicKey
 		hostKey []byte
 	)
+
+	f, err := os.CreateTemp("", "ssh-server.*.log")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	fLog := log.NewFileLogger(f.Name(), logrus.TraceLevel)
+	fLog.Info("*************************")
+	fLog.Info("[START] ssh-server")
+	defer fLog.Info("[END] ssh-server")
+
 	if cmd.Token != "" {
-		// parse token
-		t, err := token.ParseToken(cmd.Token)
+		k, hostK, err := parseToken(cmd.Token)
 		if err != nil {
-			return errors.Wrap(err, "parse token")
+			return fmt.Errorf("parse token: %w", err)
 		}
-
-		if t.AuthorizedKeys != "" {
-			keyBytes, err := base64.StdEncoding.DecodeString(t.AuthorizedKeys)
-			if err != nil {
-				return fmt.Errorf("seems like the provided encoded string is not base64 encoded")
-			}
-
-			for len(keyBytes) > 0 {
-				key, _, _, rest, err := ssh.ParseAuthorizedKey(keyBytes)
-				if err != nil {
-					return errors.Wrap(err, "parse authorized key")
-				}
-
-				keys = append(keys, key)
-				keyBytes = rest
-			}
-		}
-
-		if len(t.HostKey) > 0 {
-			var err error
-			hostKey, err = base64.StdEncoding.DecodeString(t.HostKey)
-			if err != nil {
-				return fmt.Errorf("decode host key")
-			}
-		}
+		keys = k
+		hostKey = hostK
 	}
 
-	// start the server
+	// create ssh server
 	server, err := helperssh.NewServer(cmd.Address, hostKey, keys, cmd.Workdir, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
@@ -97,27 +85,21 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 	// should we listen on stdout & stdin?
 	if cmd.Stdio {
 		if cmd.TrackActivity {
-			go func() {
-				_, err = os.Stat(agent.ContainerActivityFile)
-				if err != nil {
-					err = os.WriteFile(agent.ContainerActivityFile, nil, 0o777)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
-						return
-					}
-
-					_ = os.Chmod(agent.ContainerActivityFile, 0o777)
-				}
-
-				for {
-					time.Sleep(time.Second * 10)
-					file, _ := os.Create(agent.ContainerActivityFile)
-					file.Close()
-				}
-			}()
+			go trackActivity()
 		}
 
-		lis := stdio.NewStdioListener(os.Stdin, os.Stdout, true)
+		fLog.Info("[START] Listening aksdjfkasdf")
+		defer fLog.Info("[END] Listening")
+
+		done := make(chan struct{}, 10)
+		go func() {
+			fLog.Info("[WAIT] for done channel")
+			<-done
+			fLog.Info("[DONE] done channel closed")
+			_ = server.Close()
+		}()
+
+		lis := stdio.NewStdioListener(os.Stdin, os.Stdout, true, "ssh-server", fLog, done)
 		return server.Serve(lis)
 	}
 
@@ -133,4 +115,61 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	return server.ListenAndServe()
+}
+
+func parseToken(rawTok string) ([]ssh.PublicKey, []byte, error) {
+	var (
+		keys    []ssh.PublicKey
+		hostKey []byte
+	)
+	t, err := token.ParseToken(rawTok)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "parse token")
+	}
+
+	if t.AuthorizedKeys != "" {
+		keyBytes, err := base64.StdEncoding.DecodeString(t.AuthorizedKeys)
+		if err != nil {
+			return nil, nil, fmt.Errorf("seems like the provided encoded string is not base64 encoded")
+		}
+
+		for len(keyBytes) > 0 {
+			key, _, _, rest, err := ssh.ParseAuthorizedKey(keyBytes)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "parse authorized key")
+			}
+
+			keys = append(keys, key)
+			keyBytes = rest
+		}
+	}
+
+	if len(t.HostKey) > 0 {
+		var err error
+		hostKey, err = base64.StdEncoding.DecodeString(t.HostKey)
+		if err != nil {
+			return nil, nil, fmt.Errorf("decode host key")
+		}
+	}
+
+	return keys, hostKey, nil
+}
+
+func trackActivity() {
+	_, err := os.Stat(agent.ContainerActivityFile)
+	if err != nil {
+		err = os.WriteFile(agent.ContainerActivityFile, nil, 0o777)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
+			return
+		}
+
+		_ = os.Chmod(agent.ContainerActivityFile, 0o777)
+	}
+
+	for {
+		time.Sleep(time.Second * 10)
+		file, _ := os.Create(agent.ContainerActivityFile)
+		file.Close()
+	}
 }

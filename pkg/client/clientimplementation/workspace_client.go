@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client"
+	command2 "github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -592,18 +592,12 @@ func RunCommand(ctx context.Context, command types.StrArray, environ []string, s
 		return shell.ExecuteCommandWithShell(ctx, command[0], stdin, stdout, stderr, environ)
 	}
 
-	// run command
-	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
+	cmd := command2.NewContext(ctx, command[0], command[1:]...)
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Env = environ
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Run()
 }
 
 func DeleteMachineFolder(context, machineID string) error {
