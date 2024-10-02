@@ -43,3 +43,5 @@ exec:
       ${PRO_PROVIDER} pro provider status
     delete: |-
       ${PRO_PROVIDER} pro provider delete
+    list: |-
+      ${PRO_PROVIDER} pro provider list workspaces

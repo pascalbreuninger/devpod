@@ -64,6 +64,9 @@ type Workspace struct {
 	// Origin is the place where this config file was loaded from
 	Origin string `json:"-"`
 
+	// Pro signals this workspace is remote and doesn't necessarily exist locally
+	Pro bool `json:"-"`
+
 	// Path to the file where the SSH config to access the workspace is stored
 	SSHConfigPath string `json:"sshConfigPath,omitempty"`
 }

@@ -20,6 +20,7 @@ import { exists } from "./lib"
 import { Routes } from "./routes"
 import { useChangelogModal } from "./useChangelogModal"
 import { useLoginProModal } from "./views"
+import { loadLastLocation } from "./usePreserveLocation"
 
 export function useAppReady() {
   const isReadyLockRef = useRef<boolean>(false)
@@ -248,6 +249,12 @@ export function useAppReady() {
     if (!isReadyLockRef.current) {
       isReadyLockRef.current = true
 
+      loadLastLocation().then((location) => {
+        if (!location) {
+          return
+        }
+        navigate(location)
+      })
       unsubscribePromise.then(async () => {
         try {
           await client.ready()
@@ -262,7 +269,7 @@ export function useAppReady() {
         unsubscribe()
       })
     }
-  }, [handleMessage])
+  }, [handleMessage, navigate])
 
   return { errorModal, changelogModal, proLoginModal }
 }

@@ -14,6 +14,7 @@ func NewListCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Hidden: true,
 	}
 
+	c.AddCommand(NewWorkspacesCmd(globalFlags))
 	c.AddCommand(NewProjectsCmd(globalFlags))
 	c.AddCommand(NewTemplatesCmd(globalFlags))
 	c.AddCommand(NewTemplateOptionsCmd(globalFlags))

@@ -13,7 +13,7 @@ import {
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
-import { useEffect, useMemo } from "react"
+import { ReactNode, useEffect, useMemo } from "react"
 import { Outlet, Link as RouterLink, useMatch, useNavigate, useRouteError } from "react-router-dom"
 import { useBorderColor } from "./Theme"
 import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
@@ -24,6 +24,7 @@ import { isLinux, isMacOS, isWindows } from "./lib"
 import { Routes } from "./routes"
 import { useAppReady } from "./useAppReady"
 import { useWelcomeModal } from "./useWelcomeModal"
+import { usePreserveLocation } from "./usePreserveLocation"
 
 const showTitleBar = isMacOS || isLinux || isWindows
 const titleBarSafeArea: BoxProps["height"] = showTitleBar ? "12" : 0
@@ -32,12 +33,27 @@ const showDevPodTitle = isMacOS || isLinux
 
 export function App() {
   const routeMatchPro = useMatch(`${Routes.PRO}/*`)
+  const { errorModal, changelogModal, proLoginModal } = useAppReady()
+  usePreserveLocation()
+  usePartyParrot()
 
-  return routeMatchPro == null ? <OSSApp /> : <ProApp />
+  return routeMatchPro == null ? (
+    <OSSApp changelogModal={changelogModal} errorModal={errorModal} proLoginModal={proLoginModal} />
+  ) : (
+    <ProApp changelogModal={changelogModal} errorModal={errorModal} />
+  )
 }
 
-function OSSApp() {
-  const { errorModal, changelogModal, proLoginModal } = useAppReady()
+type TAppProps = Readonly<{
+  errorModal: ReactNode
+  changelogModal: ReactNode
+}>
+
+type TOSSAppProps = TAppProps &
+  Readonly<{
+    proLoginModal: ReactNode
+  }>
+function OSSApp({ changelogModal, proLoginModal, errorModal }: TOSSAppProps) {
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
@@ -60,7 +76,6 @@ function OSSApp() {
   }, [navigate, rootRouteMatch])
 
   const { modal: welcomeModal } = useWelcomeModal()
-  usePartyParrot()
 
   return (
     <>
@@ -134,35 +149,40 @@ function OSSApp() {
   )
 }
 
-function ProApp() {
+type TProAppProps = TAppProps
+function ProApp({ errorModal, changelogModal }: TProAppProps) {
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
   const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
 
-  // Let children decide what we need to render
   return (
-    <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
-      {showTitleBar && <TitleBar />}
-      <Box width="full" height="full">
-        <Box
-          data-tauri-drag-region // keep!
-          backgroundColor={contentBackgroundColor}
-          position="relative"
-          width="full"
-          height="full"
-          overflowY="auto">
+    <>
+      <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
+        {showTitleBar && <TitleBar />}
+        <Box width="full" height="full">
           <Box
-            as="main"
-            paddingTop="8"
-            paddingBottom={STATUS_BAR_HEIGHT}
-            paddingX="8"
+            data-tauri-drag-region // keep!
+            backgroundColor={contentBackgroundColor}
+            position="relative"
             width="full"
-            height={`calc(100vh - ${toolbarHeight})`}
+            height="full"
             overflowY="auto">
-            <Outlet />
+            <Box
+              as="main"
+              paddingTop="8"
+              paddingBottom={STATUS_BAR_HEIGHT}
+              paddingX="8"
+              width="full"
+              height={`calc(100vh - ${toolbarHeight})`}
+              overflowY="auto">
+              <Outlet />
+            </Box>
           </Box>
         </Box>
-      </Box>
-    </Flex>
+      </Flex>
+
+      {errorModal}
+      {changelogModal}
+    </>
   )
 }
 
