@@ -17,6 +17,7 @@ export interface Settings {
   experimental_vscodeInsiders: boolean
   experimental_cursor: boolean
   experimental_devPodPro: boolean
+  experimental_devPodProDesktop: boolean
   experimental_colorMode: ColorMode
   additionalCliFlags: string
   additionalEnvVars: string

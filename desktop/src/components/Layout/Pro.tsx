@@ -2,7 +2,7 @@ import { client } from "@/client"
 import { useProInstances, useSettings, useWorkspaces } from "@/contexts"
 import { Briefcase, CheckCircle, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
 import { exists } from "@/lib"
-import { TProID, TProInstance } from "@/types"
+import { TProID, TProInstance, TProInstances } from "@/types"
 import { useLoginProModal, useReLoginProModal } from "@/views/ProInstances/useLoginProModal"
 import { useDeleteProviderModal } from "@/views/Providers/useDeleteProviderModal"
 import { ChevronDownIcon, CloseIcon } from "@chakra-ui/icons"
@@ -28,9 +28,11 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { useEffect, useMemo, useState } from "react"
+import { Dispatch, ReactElement, SetStateAction, useEffect, useMemo, useState } from "react"
 import { HiArrowRightOnRectangle, HiClock } from "react-icons/hi2"
 import { IconTag } from "../Tag"
+import { Link as ReactRouterLink } from "react-router-dom"
+import { Routes } from "@/routes"
 
 export function Pro() {
   const [[proInstances]] = useProInstances()
@@ -42,10 +44,20 @@ export function Pro() {
   const handleAnnouncementClicked = () => {
     client.open("https://devpod.sh/pro")
   }
-  const { experimental_devPodPro } = useSettings()
+  const { experimental_devPodPro, experimental_devPodProDesktop } = useSettings()
   const isProUnauthenticated = proInstances?.some(({ authenticated }) => !authenticated)
+  if (!experimental_devPodPro) {
+    return (
+      <Button
+        variant="outline"
+        leftIcon={<DevPodProBadge width="9" height="8" />}
+        onClick={handleAnnouncementClicked}>
+        Try DevPod Pro
+      </Button>
+    )
+  }
 
-  return experimental_devPodPro ? (
+  return (
     <>
       <Popover isLazy isOpen={isDeleting ? true : undefined}>
         <PopoverTrigger>
@@ -61,85 +73,145 @@ export function Pro() {
         <Portal>
           <PopoverContent backgroundColor={backgroundColor} zIndex="popover">
             <PopoverArrow backgroundColor={backgroundColor} />
-            <PopoverHeader>
-              <VStack align="start" spacing="0">
-                <Heading size="sm" as="h3">
-                  Your Pro Instances
-                </Heading>
-                <Text fontSize="xs">Manage DevPod Pro</Text>
-              </VStack>
-              <ButtonGroup variant="outline">
-                <Tooltip label="Connect to Pro instance">
-                  <IconButton
-                    aria-label="Connect to Pro Instace"
-                    onClick={() => handleConnectClicked()}
-                    icon={<Icon as={HiArrowRightOnRectangle} boxSize={5} />}
-                  />
-                </Tooltip>
-                <Tooltip label="Create new Pro instance">
-                  <IconButton aria-label="Create new Pro Instance" isDisabled icon={<Plus />} />
-                </Tooltip>
-              </ButtonGroup>
-            </PopoverHeader>
-            <PopoverBody>
-              <Box
-                width="full"
-                overflowY="auto"
-                maxHeight="17rem"
-                height="full"
-                marginTop="3"
-                marginBottom="2"
-                padding="1">
-                {proInstances === undefined || proInstances.length === 0 ? (
-                  <VStack align="start" padding="2" spacing="0">
-                    <Text fontWeight="bold">No Pro instances</Text>
-                    <Text lineHeight={"1.2rem"} fontSize="sm" color="gray.500">
-                      You don&apos;t have any Pro instances set up. Connect to an existing Instance
-                      or create a new one. <br />
-                      <Link
-                        color="primary.600"
-                        onClick={() => client.open("https://devpod.sh/pro")}>
-                        Learn more
-                      </Link>
-                    </Text>
-                    <ButtonGroup width="full" marginTop="4" variant="primary">
-                      <Button onClick={() => handleConnectClicked()}>Login to Pro</Button>
-                      <Button isDisabled>Create new Pro</Button>
-                    </ButtonGroup>
-                  </VStack>
-                ) : (
-                  proInstances.map((proInstance) => {
-                    const host = proInstance.host
-                    if (!host) {
-                      return null
-                    }
-
-                    return (
-                      <ProInstanceRow
-                        key={host}
-                        {...proInstance}
-                        host={host}
-                        onIsDeletingChanged={setIsDeleting}
-                        onLoginClicked={() => handleReLoginClicked({ host })}
-                      />
-                    )
-                  })
-                )}
-              </Box>
-            </PopoverBody>
+            {experimental_devPodProDesktop ? (
+              <ProPopoverContent
+                proInstances={proInstances}
+                emptyProInstances={<EmptyProInstances onConnect={handleConnectClicked} />}
+              />
+            ) : (
+              <LegacyProPopoverContent
+                proInstances={proInstances}
+                onConnect={handleConnectClicked}
+                setIsDeleting={setIsDeleting}
+                onReLogin={(host) => handleReLoginClicked({ host })}
+                emptyProInstances={<EmptyProInstances onConnect={handleConnectClicked} />}
+              />
+            )}
           </PopoverContent>
         </Portal>
       </Popover>
       {loginProModal}
       {reLoginProModal}
     </>
-  ) : (
-    <Button
-      variant="outline"
-      leftIcon={<DevPodProBadge width="9" height="8" />}
-      onClick={handleAnnouncementClicked}>
-      Try DevPod Pro
-    </Button>
+  )
+}
+
+type TProPopoverContentProps = Readonly<{
+  proInstances: TProInstances | undefined
+  emptyProInstances: ReactElement
+  // setIsDeleting: Dispatch<SetStateAction<boolean>>
+  // onConnect: VoidFunction
+  // onReLogin: (host: string) => void
+}>
+function ProPopoverContent({ proInstances, emptyProInstances }: TProPopoverContentProps) {
+  return (
+    <>
+      {proInstances === undefined || proInstances.length === 0
+        ? emptyProInstances
+        : proInstances.map((proInstance) => {
+            const host = proInstance.host
+            if (!host) {
+              return null
+            }
+
+            return (
+              <Link as={ReactRouterLink} key={host} to={Routes.toProInstance(host)}>
+                {host}
+              </Link>
+            )
+          })}
+    </>
+  )
+}
+
+type TLegacyProPopoverContentProps = Readonly<{
+  proInstances: TProInstances | undefined
+  emptyProInstances: ReactElement
+  setIsDeleting: Dispatch<SetStateAction<boolean>>
+  onConnect: VoidFunction
+  onReLogin: (host: string) => void
+}>
+function LegacyProPopoverContent({
+  proInstances,
+  emptyProInstances,
+  onConnect,
+  setIsDeleting,
+  onReLogin,
+}: TLegacyProPopoverContentProps) {
+  return (
+    <>
+      <PopoverHeader>
+        <VStack align="start" spacing="0">
+          <Heading size="sm" as="h3">
+            Your Pro Instances
+          </Heading>
+          <Text fontSize="xs">Manage DevPod Pro</Text>
+        </VStack>
+        <ButtonGroup variant="outline">
+          <Tooltip label="Connect to Pro instance">
+            <IconButton
+              aria-label="Connect to Pro Instace"
+              onClick={onConnect}
+              icon={<Icon as={HiArrowRightOnRectangle} boxSize={5} />}
+            />
+          </Tooltip>
+          <Tooltip label="Create new Pro instance">
+            <IconButton aria-label="Create new Pro Instance" isDisabled icon={<Plus />} />
+          </Tooltip>
+        </ButtonGroup>
+      </PopoverHeader>
+      <PopoverBody>
+        <Box
+          width="full"
+          overflowY="auto"
+          maxHeight="17rem"
+          height="full"
+          marginTop="3"
+          marginBottom="2"
+          padding="1">
+          {proInstances === undefined || proInstances.length === 0
+            ? emptyProInstances
+            : proInstances.map((proInstance) => {
+                const host = proInstance.host
+                if (!host) {
+                  return null
+                }
+
+                return (
+                  <ProInstanceRow
+                    key={host}
+                    {...proInstance}
+                    host={host}
+                    onIsDeletingChanged={setIsDeleting}
+                    onLoginClicked={() => onReLogin(host)}
+                  />
+                )
+              })}
+        </Box>
+      </PopoverBody>
+    </>
+  )
+}
+
+type TEmptyProInstancesProps = Readonly<{
+  onConnect: VoidFunction
+}>
+function EmptyProInstances({ onConnect }: TEmptyProInstancesProps) {
+  return (
+    <VStack align="start" padding="2" spacing="0">
+      <Text fontWeight="bold">No Pro instances</Text>
+      <Text lineHeight={"1.2rem"} fontSize="sm" color="gray.500">
+        You don&apos;t have any Pro instances set up. Connect to an existing Instance or create a
+        new one. <br />
+        <Link color="primary.600" onClick={() => client.open("https://devpod.sh/pro")}>
+          Learn more
+        </Link>
+      </Text>
+      <ButtonGroup width="full" marginTop="4" variant="primary">
+        <Button onClick={onConnect}>Login to Pro</Button>
+        <Button isDisabled>Create new Pro Instance</Button>
+      </ButtonGroup>
+    </VStack>
   )
 }
 

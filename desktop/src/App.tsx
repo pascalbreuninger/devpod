@@ -26,9 +26,17 @@ import { useAppReady } from "./useAppReady"
 import { useWelcomeModal } from "./useWelcomeModal"
 
 const showTitleBar = isMacOS || isLinux || isWindows
+const titleBarSafeArea: BoxProps["height"] = showTitleBar ? "12" : 0
+
 const showDevPodTitle = isMacOS || isLinux
 
 export function App() {
+  const routeMatchPro = useMatch(`${Routes.PRO}/*`)
+
+  return routeMatchPro == null ? <OSSApp /> : <ProApp />
+}
+
+function OSSApp() {
   const { errorModal, changelogModal, proLoginModal } = useAppReady()
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
@@ -36,10 +44,6 @@ export function App() {
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
   const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
   const borderColor = useBorderColor()
-
-  const titleBarSafeArea = useMemo<BoxProps["height"]>(() => {
-    return showTitleBar ? "12" : 0
-  }, [])
 
   const mainGridProps = useMemo<GridProps>(() => {
     if (sidebarPosition === "right") {
@@ -61,26 +65,7 @@ export function App() {
   return (
     <>
       <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
-        {showTitleBar && (
-          <Box
-            data-tauri-drag-region // keep!
-            height={titleBarSafeArea}
-            position="fixed"
-            top="0"
-            width="full"
-            textAlign="center"
-            zIndex="dropdown"
-            justifyItems="center">
-            {showDevPodTitle && (
-              <Text
-                data-tauri-drag-region // keep!
-                fontWeight="bold"
-                marginTop="2">
-                DevPod
-              </Text>
-            )}
-          </Box>
-        )}
+        {showTitleBar && <TitleBar />}
 
         <Box width="full" height="full">
           <Grid height="full" {...mainGridProps}>
@@ -146,6 +131,61 @@ export function App() {
       {changelogModal}
       {proLoginModal}
     </>
+  )
+}
+
+function ProApp() {
+  const contentBackgroundColor = useColorModeValue("white", "background.darkest")
+  const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
+
+  // Let children decide what we need to render
+  return (
+    <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
+      {showTitleBar && <TitleBar />}
+      <Box width="full" height="full">
+        <Box
+          data-tauri-drag-region // keep!
+          backgroundColor={contentBackgroundColor}
+          position="relative"
+          width="full"
+          height="full"
+          overflowY="auto">
+          <Box
+            as="main"
+            paddingTop="8"
+            paddingBottom={STATUS_BAR_HEIGHT}
+            paddingX="8"
+            width="full"
+            height={`calc(100vh - ${toolbarHeight})`}
+            overflowY="auto">
+            <Outlet />
+          </Box>
+        </Box>
+      </Box>
+    </Flex>
+  )
+}
+
+function TitleBar() {
+  return (
+    <Box
+      data-tauri-drag-region // keep!
+      height={titleBarSafeArea}
+      position="fixed"
+      top="0"
+      width="full"
+      textAlign="center"
+      zIndex="dropdown"
+      justifyItems="center">
+      {showDevPodTitle && (
+        <Text
+          data-tauri-drag-region // keep!
+          fontWeight="bold"
+          marginTop="2">
+          DevPod
+        </Text>
+      )}
+    </Box>
   )
 }
 

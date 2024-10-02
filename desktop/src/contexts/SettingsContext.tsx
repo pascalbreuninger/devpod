@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react"
 import { client } from "../client"
@@ -37,6 +36,7 @@ const initialSettings: TSettings = {
   experimental_vscodeInsiders: true,
   experimental_cursor: true,
   experimental_devPodPro: false,
+  experimental_devPodProDesktop: false,
   experimental_colorMode: "light",
   additionalCliFlags: "",
   additionalEnvVars: "",

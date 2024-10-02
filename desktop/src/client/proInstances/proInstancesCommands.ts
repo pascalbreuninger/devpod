@@ -20,11 +20,11 @@ import {
 } from "../constants"
 import { TStreamEventListenerFn } from "../types"
 
-export class ProCommands {
+export class ProInstanceCommands {
   static DEBUG = false
 
   private static newCommand(args: string[]): Command {
-    return new Command([...args, ...(ProCommands.DEBUG ? [DEVPOD_FLAG_DEBUG] : [])])
+    return new Command([...args, ...(ProInstanceCommands.DEBUG ? [DEVPOD_FLAG_DEBUG] : [])])
   }
 
   static async Login(
@@ -39,7 +39,7 @@ export class ProCommands {
     const maybeAccessKeyFlag = accessKey ? [toFlagArg(DEVPOD_FLAG_ACCESS_KEY, accessKey)] : []
     const useFlag = toFlagArg(DEVPOD_FLAG_USE, "false")
 
-    const cmd = ProCommands.newCommand([
+    const cmd = ProInstanceCommands.newCommand([
       DEVPOD_COMMAND_PRO,
       DEVPOD_COMMAND_LOGIN,
       host,
@@ -68,7 +68,7 @@ export class ProCommands {
     config?: TListProInstancesConfig
   ): Promise<Result<readonly TProInstance[]>> {
     const maybeLoginFlag = config?.authenticate ? [DEVPOD_FLAG_LOGIN] : []
-    const result = await ProCommands.newCommand([
+    const result = await ProInstanceCommands.newCommand([
       DEVPOD_COMMAND_PRO,
       DEVPOD_COMMAND_LIST,
       DEVPOD_FLAG_JSON_OUTPUT,
@@ -88,7 +88,7 @@ export class ProCommands {
   }
 
   static async RemoveProInstance(id: TProID) {
-    const result = await ProCommands.newCommand([
+    const result = await ProInstanceCommands.newCommand([
       DEVPOD_COMMAND_PRO,
       DEVPOD_COMMAND_DELETE,
       id,

@@ -18,13 +18,14 @@ import { Theme as TauriTheme } from "@tauri-apps/api/window"
 import { TSettings } from "../contexts"
 import { Release } from "../gen"
 import { Result, Return, isError, noop } from "../lib"
-import { TCommunityContributions, TUnsubscribeFn } from "../types"
+import { TCommunityContributions, TProID, TUnsubscribeFn } from "../types"
 import { ContextClient } from "./context"
 import { IDEsClient } from "./ides"
-import { ProClient } from "./pro"
+import { ProInstancesClient } from "./proInstances"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 import { Command as DevPodCommand } from "./command"
+import { WorkspaceCommands } from "./workspaces/workspaceCommands"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -80,7 +81,7 @@ class Client {
   public readonly providers = new ProvidersClient()
   public readonly ides = new IDEsClient()
   public readonly context = new ContextClient()
-  public readonly pro = new ProClient()
+  public readonly proInstances = new ProInstancesClient()
 
   public setSetting<TSettingName extends keyof TClientSettings>(
     name: TSettingName,
@@ -92,7 +93,7 @@ class Client {
       this.workspaces.setDebug(debug)
       this.providers.setDebug(debug)
       this.ides.setDebug(debug)
-      this.pro.setDebug(debug)
+      this.proInstances.setDebug(debug)
     }
     if (name === "additionalCliFlags") {
       this.workspaces.setAdditionalFlags(value as string)
@@ -116,6 +117,7 @@ class Client {
       DevPodCommand.NO_PROXY = value as string
     }
   }
+
   public ready(): Promise<void> {
     return invoke("ui_ready")
   }
@@ -359,6 +361,20 @@ class Client {
 
   public async getSystemTheme(): Promise<TauriTheme | null> {
     return tauriWindow.appWindow.theme()
+  }
+
+  public getProClient(id: TProID): ProClient {
+    return new ProClient(id)
+  }
+}
+
+// TODO: Bring in js-client types
+// TODO: Move to separate file
+export class ProClient {
+  constructor(private readonly id: string) {}
+
+  public async listWorkspaces(): Promise<Result<null[]>> {
+    return WorkspaceCommands.ListWorkspaces(this.id)
   }
 }
 

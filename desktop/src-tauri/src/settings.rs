@@ -30,6 +30,8 @@ pub struct Settings {
     experimental_cursor: bool,
     #[serde(rename = "experimental_devPodPro")]
     experimental_devpod_pro: bool,
+    #[serde(rename = "experimental_devPodProDesktop")]
+    experimental_devpod_pro_desktop: bool,
     #[serde(rename = "experimental_colorMode")]
     experimental_color_mode: ColorMode,
     additional_cli_flags: String,
@@ -54,7 +56,7 @@ enum SidebarPosition {
 #[ts(export)]
 enum ColorMode {
     Dark,
-    Light
+    Light,
 }
 
 #[derive(Debug, Serialize, TS)]

@@ -1,13 +1,13 @@
 import { Result, ResultError } from "../../lib"
 import { TImportWorkspaceConfig, TListProInstancesConfig, TProID, TProInstance } from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
-import { ProCommands } from "./proCommands"
+import { ProInstanceCommands } from "./proInstancesCommands"
 
-export class ProClient implements TDebuggable {
+export class ProInstancesClient implements TDebuggable {
   constructor() {}
 
   public setDebug(isEnabled: boolean): void {
-    ProCommands.DEBUG = isEnabled
+    ProInstanceCommands.DEBUG = isEnabled
   }
 
   public async login(
@@ -16,18 +16,18 @@ export class ProClient implements TDebuggable {
     accessKey?: string,
     listener?: TStreamEventListenerFn
   ): Promise<ResultError> {
-    return ProCommands.Login(host, providerName, accessKey, listener)
+    return ProInstanceCommands.Login(host, providerName, accessKey, listener)
   }
 
   public async listAll(config?: TListProInstancesConfig): Promise<Result<readonly TProInstance[]>> {
-    return ProCommands.ListProInstances(config)
+    return ProInstanceCommands.ListProInstances(config)
   }
 
   public async remove(id: TProID) {
-    return ProCommands.RemoveProInstance(id)
+    return ProInstanceCommands.RemoveProInstance(id)
   }
 
   public async importWorkspace(config: TImportWorkspaceConfig): Promise<ResultError> {
-    return ProCommands.ImportWorkspace(config)
+    return ProInstanceCommands.ImportWorkspace(config)
   }
 }
