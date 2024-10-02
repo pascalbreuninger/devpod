@@ -25,10 +25,6 @@ pub struct Settings {
     http_proxy_url: String,
     https_proxy_url: String,
     no_proxy: String,
-
-    // Experimental settings
-    #[serde(rename = "experimental_colorMode")]
-    experimental_color_mode: ColorMode,
     #[serde(rename = "experimental_multiDevcontainer")]
     experimental_multi_devcontainer: bool,
     #[serde(rename = "experimental_fleet")]
@@ -43,6 +39,10 @@ pub struct Settings {
     experimental_positron: bool,
     #[serde(rename = "experimental_devPodPro")]
     experimental_devpod_pro: bool,
+    #[serde(rename = "experimental_devPodProDesktop")]
+    experimental_devpod_pro_desktop: bool,
+    #[serde(rename = "experimental_colorMode")]
+    experimental_color_mode: ColorMode,
 }
 
 #[derive(Debug, Serialize, TS)]

@@ -26,7 +26,7 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
   const proInstancesQuery = useQuery({
     queryKey: QueryKeys.PRO_INSTANCES,
     queryFn: async () => {
-      const proInstances = (await client.pro.listAll({ authenticate: true })).unwrap()
+      const proInstances = (await client.proInstances.listAll({ authenticate: true })).unwrap()
       if (proInstances !== undefined && proInstances.length > 0) {
         set("experimental_devPodPro", true)
       }

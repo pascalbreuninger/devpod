@@ -1,8 +1,22 @@
-import { createBrowserRouter, Params, Path } from "react-router-dom"
+/* eslint-disable react-hooks/exhaustive-deps */
+import { Heading, Link } from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
+import {
+  Outlet,
+  Params,
+  Path,
+  Link as ReactRouterLink,
+  createBrowserRouter,
+  useParams,
+} from "react-router-dom"
 import { App, ErrorPage } from "./App"
+import { client } from "./client"
+import { ProClient } from "./client/client"
+import { WarningMessageBox } from "./components"
 import { TActionID } from "./contexts"
 import { exists } from "./lib"
-import { TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
+import { TProID, TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
 import {
   Action,
   Actions,
@@ -20,10 +34,10 @@ export const Routes = {
   SETTINGS: "/settings",
   WORKSPACES: "/workspaces",
   ACTIONS: "/actions",
-  get ACTION() {
+  get ACTION(): string {
     return `${Routes.ACTIONS}/:action`
   },
-  get WORKSPACE_CREATE() {
+  get WORKSPACE_CREATE(): string {
     return `${Routes.WORKSPACES}/new`
   },
   toWorkspaceCreate(
@@ -46,7 +60,7 @@ export const Routes = {
       search: searchParams.toString(),
     }
   },
-  toAction(actionID: TActionID, onSuccess?: string) {
+  toAction(actionID: TActionID, onSuccess?: string): string {
     if (onSuccess) {
       return `${Routes.ACTIONS}/${actionID}?onSuccess=${encodeURIComponent(onSuccess)}`
     }
@@ -73,15 +87,22 @@ export const Routes = {
     }
   },
   PROVIDERS: "/providers",
-  get PROVIDER() {
+  get PROVIDER(): string {
     return `${Routes.PROVIDERS}/:provider`
   },
-  toProvider(providerID: string) {
+  toProvider(providerID: string): string {
     return `${Routes.PROVIDERS}/${providerID}`
   },
   getProviderId(params: Params<string>): string | undefined {
     // Needs to match `:provider` from detail route exactly!
     return params["provider"]
+  },
+  PRO: "/pro",
+  PRO_INSTANCE: "/pro/:host",
+  toProInstance(host: string): string {
+    const h = host.replaceAll(".", "-")
+
+    return `/pro/${h}`
   },
 } as const
 
@@ -91,6 +112,16 @@ export const router = createBrowserRouter([
     element: <App />,
     errorElement: <ErrorPage />,
     children: [
+      {
+        path: Routes.PRO,
+        element: <Pro />,
+        children: [
+          {
+            path: Routes.PRO_INSTANCE,
+            element: <ProInstance />,
+          },
+        ],
+      },
       {
         path: Routes.WORKSPACES,
         element: <Workspaces />,
@@ -125,3 +156,66 @@ export const router = createBrowserRouter([
     ],
   },
 ])
+
+function Pro() {
+  return (
+    <>
+      <Outlet />
+    </>
+  )
+}
+
+function ProInstance() {
+  const { host } = useParams<{ host: string | undefined }>()
+  console.log(host)
+  // FIXME: Can never be undefined!
+  const client = useProClient(host?.replaceAll("-", ".")!)
+  useProWorkspaces(client)
+
+  if (host == undefined || host.length === 0) {
+    return (
+      <WarningMessageBox
+        warning={
+          <>
+            Pro Instance not found
+            <br />
+            <Link as={ReactRouterLink} to={Routes.ROOT}>
+              Go back
+            </Link>
+          </>
+        }
+      />
+    )
+  }
+
+  return (
+    <div>
+      <Heading>{host}</Heading>
+    </div>
+  )
+}
+
+function useProClient(id: TProID) {
+  const c = useMemo(() => {
+    return client.getProClient(id)
+  }, [])
+
+  return c
+}
+
+function useProWorkspaces(client: ProClient) {
+  const {
+    data: workspaces,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["PRO"],
+    queryFn: async () => {
+      const res = (await client.listWorkspaces()).unwrap()
+      console.log(res)
+
+      return res
+    },
+    refetchInterval: 5_000,
+  })
+}

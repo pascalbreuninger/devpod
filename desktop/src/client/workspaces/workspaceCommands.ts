@@ -19,6 +19,7 @@ import {
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_DEVCONTAINER_PATH,
   DEVPOD_FLAG_FORCE,
+  DEVPOD_FLAG_HOST,
   DEVPOD_FLAG_ID,
   DEVPOD_FLAG_IDE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
@@ -43,8 +44,13 @@ export class WorkspaceCommands {
     return new Command([...args, ...(WorkspaceCommands.DEBUG ? [DEVPOD_FLAG_DEBUG] : [])])
   }
 
-  static async ListWorkspaces(): Promise<Result<TWorkspaceWithoutStatus[]>> {
-    const result = await new Command([DEVPOD_COMMAND_LIST, DEVPOD_FLAG_JSON_OUTPUT]).run()
+  static async ListWorkspaces(host?: string): Promise<Result<TWorkspaceWithoutStatus[]>> {
+    const maybeHostFlag = exists(host) ? [toFlagArg(DEVPOD_FLAG_HOST, host)] : []
+    const result = await new Command([
+      DEVPOD_COMMAND_LIST,
+      DEVPOD_FLAG_JSON_OUTPUT,
+      ...maybeHostFlag,
+    ]).run()
     if (result.err) {
       return result
     }
@@ -52,8 +58,10 @@ export class WorkspaceCommands {
     const rawWorkspaces = JSON.parse(result.val.stdout) as TRawWorkspaces
 
     return Return.Value(
-      rawWorkspaces.filter((workspace): workspace is TWorkspaceWithoutStatus =>
-        exists(workspace.id)
+      rawWorkspaces.filter(
+        (workspace): workspace is TWorkspaceWithoutStatus =>
+          // TODO: Uncomment exists(workspace.id)
+          true
       )
     )
   }
