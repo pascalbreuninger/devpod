@@ -1,7 +1,9 @@
 package workspace
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +13,8 @@ import (
 	"regexp"
 	"strings"
 
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -25,6 +29,7 @@ import (
 	"github.com/loft-sh/log/survey"
 	"github.com/loft-sh/log/terminal"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -77,8 +82,13 @@ func ListWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.W
 		return nil, err
 	}
 
+	// list local workspaces
 	retWorkspaces := []*provider2.Workspace{}
 	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+
 		workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
 		if err != nil {
 			log.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
@@ -86,6 +96,105 @@ func ListWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.W
 		}
 
 		retWorkspaces = append(retWorkspaces, workspaceConfig)
+	}
+
+	proWorkspaces, err := ListProWorkspaces(devPodConfig, log)
+	if err != nil {
+		return retWorkspaces, err
+	}
+
+	// TODO : How to handle this in the future?
+	// Behind an interface?
+	// Or explicit?
+	// TODO: Dedup with local workspaces
+	// Remote always wins, just fill in the blanks
+	retWorkspaces = append(retWorkspaces, proWorkspaces...)
+
+	return retWorkspaces, nil
+}
+
+// TODO: Can we do better performance wise?
+func ListProWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.Workspace, error) {
+	retWorkspaces := []*provider2.Workspace{}
+	for provider, providerContextConfig := range devPodConfig.Current().Providers {
+		if !providerContextConfig.Initialized {
+			continue
+		}
+
+		providerConfig, err := provider2.LoadProviderConfig(devPodConfig.DefaultContext, provider)
+		if err != nil {
+			return retWorkspaces, fmt.Errorf("load provider config for provider \"%s\": %w", provider, err)
+		}
+		// only get pro providers
+		if !providerConfig.IsProxyProvider() {
+			continue
+		}
+
+		opts := devPodConfig.ProviderOptions(provider)
+		var buf bytes.Buffer
+		if err = clientimplementation.RunCommandWithBinaries(
+			context.Background(),
+			"list",
+			providerConfig.Exec.Proxy.List,
+			devPodConfig.DefaultContext,
+			nil,
+			nil,
+			opts,
+			providerConfig,
+			nil, nil, &buf, log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false), log,
+		); err != nil {
+			log.ErrorStreamOnly().Errorf("list workspaces for provider \"%s\": %v", provider, err)
+		}
+
+		if buf.Len() > 0 {
+			workspaces := []managementv1.DevPodWorkspaceInstance{}
+			if err := json.Unmarshal(buf.Bytes(), &workspaces); err != nil {
+				log.ErrorStreamOnly().Errorf("unmarshal devpod workspace instances: %w", err)
+			}
+
+			for _, proWorkspace := range workspaces {
+				// id
+				id := proWorkspace.GetName() // TODO: Show display name?
+
+				// source
+				source := provider2.WorkspaceSource{}
+				if proWorkspace.Annotations != nil && proWorkspace.Annotations[storagev1.DevPodWorkspaceSourceAnnotation] != "" {
+					// source to workspace config source
+					rawSource := proWorkspace.Annotations[storagev1.DevPodWorkspaceSourceAnnotation]
+					s := provider2.ParseWorkspaceSource(rawSource)
+					if s == nil {
+						log.ErrorStreamOnly().Warnf("unable to parse workspace source \"%s\": %v", rawSource, err)
+					} else {
+						source = *s
+					}
+				}
+
+				// last used timestamp
+				lastUsedTimestamp := types.Time{}
+				sleepModeConfig := proWorkspace.Status.SleepModeConfig
+				if sleepModeConfig != nil {
+					lastUsedTimestamp = types.Unix(sleepModeConfig.Status.LastActivity, 0)
+				}
+
+				// creation timestamp
+				creationTimestamp := types.Time{}
+				if !proWorkspace.CreationTimestamp.IsZero() {
+					creationTimestamp = types.NewTime(proWorkspace.CreationTimestamp.Time)
+				}
+
+				workspace := provider2.Workspace{
+					ID:     id,
+					Source: source,
+					Provider: provider2.WorkspaceProviderConfig{
+						Name: provider,
+					},
+					LastUsedTimestamp: lastUsedTimestamp,
+					CreationTimestamp: creationTimestamp,
+					Pro:               true,
+				}
+				retWorkspaces = append(retWorkspaces, &workspace)
+			}
+		}
 	}
 
 	return retWorkspaces, nil
@@ -624,26 +733,16 @@ func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.L
 		return nil, nil, nil, errProvideWorkspaceArg
 	}
 
-	// ask which workspace to use
-	workspacesDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
+	workspaces, err := ListWorkspaces(devPodConfig, log)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("list workspaces: %w", err)
 	}
 
 	workspaceIDs := []string{}
-	workspacesDirs, err := os.ReadDir(workspacesDir)
-	if err != nil {
-		return nil, nil, nil, err
+	for _, workspace := range workspaces {
+		workspaceIDs = append(workspaceIDs, workspace.ID)
 	}
-
-	for _, workspace := range workspacesDirs {
-		name := workspace.Name()
-		// filter out hidden files
-		if !strings.HasPrefix(name, ".") {
-			workspaceIDs = append(workspaceIDs, name)
-		}
-	}
-	if len(workspaceIDs) == 0 {
+	if len(workspaces) == 0 {
 		return nil, nil, nil, errProvideWorkspaceArg
 	}
 
@@ -662,6 +761,7 @@ func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.L
 }
 
 func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
+	// TODO: Check if that workspace
 	workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, nil, err
