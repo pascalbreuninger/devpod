@@ -259,6 +259,9 @@ type ProxyCommands struct {
 
 	// Status proxies the status command
 	Status types.StrArray `json:"status,omitempty"`
+
+	// List lists all workspaces associated with this provider
+	List types.StrArray `json:"list,omitempty"`
 }
 
 type SubOptions struct {

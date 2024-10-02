@@ -15,12 +15,13 @@ export const DevPodContext = createContext<TDevpodContext>(null!)
 
 export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>) {
   const { set } = useChangeSettings()
-  usePollWorkspaces()
+  // usePollWorkspaces() // FIXME: Uncomment
 
   const providersQuery = useQuery({
     queryKey: QueryKeys.PROVIDERS,
     queryFn: async () => (await client.providers.listAll()).unwrap(),
     refetchInterval: REFETCH_PROVIDER_INTERVAL_MS,
+    enabled: false, // FIXME: undo
   })
 
   const proInstancesQuery = useQuery({

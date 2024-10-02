@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { Heading, Link } from "@chakra-ui/react"
+import { Heading, Link, List, ListItem } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
@@ -167,10 +167,13 @@ function Pro() {
 
 function ProInstance() {
   const { host } = useParams<{ host: string | undefined }>()
-  console.log(host)
   // FIXME: Can never be undefined!
   const client = useProClient(host?.replaceAll("-", ".")!)
-  useProWorkspaces(client)
+  const { workspaces } = useProWorkspaces(client)
+
+  const handleWorkspaceClicked = (id: string) => {
+    console.log(id)
+  }
 
   if (host == undefined || host.length === 0) {
     return (
@@ -191,6 +194,17 @@ function ProInstance() {
   return (
     <div>
       <Heading>{host}</Heading>
+      {workspaces && (
+        <List>
+          {workspaces.map((w) => (
+            <ListItem
+              onClick={() => handleWorkspaceClicked(w.metadata!.name!)}
+              key={w.metadata!.name}>
+              {w.metadata?.name}
+            </ListItem>
+          ))}
+        </List>
+      )}
     </div>
   )
 }
@@ -212,10 +226,11 @@ function useProWorkspaces(client: ProClient) {
     queryKey: ["PRO"],
     queryFn: async () => {
       const res = (await client.listWorkspaces()).unwrap()
-      console.log(res)
 
       return res
     },
     refetchInterval: 5_000,
   })
+
+  return { workspaces }
 }

@@ -40,17 +40,23 @@ export class WorkspaceCommands {
   static DEBUG = false
   static ADDITIONAL_FLAGS = ""
 
+  // TODO: Should be on object, not static
+  static PRO_ID: string | undefined = undefined
+
   private static newCommand(args: string[]): Command {
-    return new Command([...args, ...(WorkspaceCommands.DEBUG ? [DEVPOD_FLAG_DEBUG] : [])])
+    const extraFlags = []
+    if (WorkspaceCommands.DEBUG) {
+      extraFlags.push(DEVPOD_FLAG_DEBUG)
+    }
+    if (WorkspaceCommands.PRO_ID) {
+      extraFlags.push(toFlagArg(DEVPOD_FLAG_HOST, WorkspaceCommands.PRO_ID))
+    }
+
+    return new Command([...args, ...extraFlags])
   }
 
-  static async ListWorkspaces(host?: string): Promise<Result<TWorkspaceWithoutStatus[]>> {
-    const maybeHostFlag = exists(host) ? [toFlagArg(DEVPOD_FLAG_HOST, host)] : []
-    const result = await new Command([
-      DEVPOD_COMMAND_LIST,
-      DEVPOD_FLAG_JSON_OUTPUT,
-      ...maybeHostFlag,
-    ]).run()
+  static async ListWorkspaces(): Promise<Result<TWorkspaceWithoutStatus[]>> {
+    const result = await new Command([DEVPOD_COMMAND_LIST, DEVPOD_FLAG_JSON_OUTPUT]).run()
     if (result.err) {
       return result
     }
