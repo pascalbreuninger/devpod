@@ -761,7 +761,7 @@ func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.L
 }
 
 func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
-	// TODO: Check if that workspace
+	// TODO: Check if that workspace is remote or not
 	workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, nil, err
