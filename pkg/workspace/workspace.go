@@ -1,20 +1,11 @@
 package workspace
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	"github.com/charmbracelet/huh"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -23,243 +14,15 @@ import (
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/ide/ideparse"
 	"github.com/loft-sh/devpod/pkg/image"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
-	"github.com/loft-sh/log/survey"
 	"github.com/loft-sh/log/terminal"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
-var (
-	branchRegEx      = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
-	prReferenceRegEx = regexp.MustCompile(git.PullRequestReference)
-)
-
-func SingleMachineName(devPodConfig *config.Config, provider string, log log.Logger) string {
-	legacyMachineName := "devpod-shared-" + provider
-	machines, err := listMachines(devPodConfig, log)
-	if err == nil {
-		for _, machine := range machines {
-			if machine.Provider.Name == provider && machine.ID == legacyMachineName {
-				return legacyMachineName
-			}
-		}
-	}
-
-	return encoding.SafeConcatNameMax([]string{"devpod-shared", provider, encoding.GetMachineUIDShort(log)}, encoding.MachineUIDLength)
-}
-
-// Exists checks if the given workspace already exists
-func Exists(devPodConfig *config.Config, args []string) string {
-	if len(args) == 0 {
-		return ""
-	}
-
-	// check if workspace already exists
-	_, name := file.IsLocalDir(args[0])
-
-	// convert to id
-	workspaceID := ToID(name)
-
-	// already exists?
-	if !provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
-		return ""
-	}
-
-	return workspaceID
-}
-
-func ListWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.Workspace, error) {
-	workspaceDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
-	if err != nil {
-		return nil, err
-	}
-
-	entries, err := os.ReadDir(workspaceDir)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	// list local workspaces
-	retWorkspaces := []*provider2.Workspace{}
-	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), ".") {
-			continue
-		}
-
-		workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
-		if err != nil {
-			log.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
-			continue
-		}
-
-		retWorkspaces = append(retWorkspaces, workspaceConfig)
-	}
-
-	proWorkspaces, err := ListProWorkspaces(devPodConfig, log)
-	if err != nil {
-		return retWorkspaces, err
-	}
-
-	// TODO : How to handle this in the future?
-	// Behind an interface?
-	// Or explicit?
-	// TODO: Dedup with local workspaces
-	// Remote always wins, just fill in the blanks
-	retWorkspaces = append(retWorkspaces, proWorkspaces...)
-
-	return retWorkspaces, nil
-}
-
-// TODO: Can we do better performance wise?
-func ListProWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.Workspace, error) {
-	retWorkspaces := []*provider2.Workspace{}
-	for provider, providerContextConfig := range devPodConfig.Current().Providers {
-		if !providerContextConfig.Initialized {
-			continue
-		}
-
-		providerConfig, err := provider2.LoadProviderConfig(devPodConfig.DefaultContext, provider)
-		if err != nil {
-			return retWorkspaces, fmt.Errorf("load provider config for provider \"%s\": %w", provider, err)
-		}
-		// only get pro providers
-		if !providerConfig.IsProxyProvider() {
-			continue
-		}
-
-		opts := devPodConfig.ProviderOptions(provider)
-		var buf bytes.Buffer
-		if err = clientimplementation.RunCommandWithBinaries(
-			context.Background(),
-			"list",
-			providerConfig.Exec.Proxy.List,
-			devPodConfig.DefaultContext,
-			nil,
-			nil,
-			opts,
-			providerConfig,
-			nil, nil, &buf, log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false), log,
-		); err != nil {
-			log.ErrorStreamOnly().Errorf("list workspaces for provider \"%s\": %v", provider, err)
-		}
-
-		if buf.Len() > 0 {
-			workspaces := []managementv1.DevPodWorkspaceInstance{}
-			if err := json.Unmarshal(buf.Bytes(), &workspaces); err != nil {
-				log.ErrorStreamOnly().Errorf("unmarshal devpod workspace instances: %w", err)
-			}
-
-			for _, proWorkspace := range workspaces {
-				// id
-				id := proWorkspace.GetName() // TODO: Show display name?
-
-				// source
-				source := provider2.WorkspaceSource{}
-				if proWorkspace.Annotations != nil && proWorkspace.Annotations[storagev1.DevPodWorkspaceSourceAnnotation] != "" {
-					// source to workspace config source
-					rawSource := proWorkspace.Annotations[storagev1.DevPodWorkspaceSourceAnnotation]
-					s := provider2.ParseWorkspaceSource(rawSource)
-					if s == nil {
-						log.ErrorStreamOnly().Warnf("unable to parse workspace source \"%s\": %v", rawSource, err)
-					} else {
-						source = *s
-					}
-				}
-
-				// last used timestamp
-				lastUsedTimestamp := types.Time{}
-				sleepModeConfig := proWorkspace.Status.SleepModeConfig
-				if sleepModeConfig != nil {
-					lastUsedTimestamp = types.Unix(sleepModeConfig.Status.LastActivity, 0)
-				}
-
-				// creation timestamp
-				creationTimestamp := types.Time{}
-				if !proWorkspace.CreationTimestamp.IsZero() {
-					creationTimestamp = types.NewTime(proWorkspace.CreationTimestamp.Time)
-				}
-
-				workspace := provider2.Workspace{
-					ID:     id,
-					Source: source,
-					Provider: provider2.WorkspaceProviderConfig{
-						Name: provider,
-					},
-					LastUsedTimestamp: lastUsedTimestamp,
-					CreationTimestamp: creationTimestamp,
-					Pro:               true,
-				}
-				retWorkspaces = append(retWorkspaces, &workspace)
-			}
-		}
-	}
-
-	return retWorkspaces, nil
-}
-
-func GetWorkspaceName(args []string) string {
-	if len(args) == 0 {
-		return ""
-	}
-
-	// check if workspace already exists
-	_, name := file.IsLocalDir(args[0])
-
-	// convert to id
-	workspaceID := ToID(name)
-
-	return workspaceID
-}
-
-// GetWorkspace tries to retrieve an already existing workspace
-func GetWorkspace(devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (client.BaseWorkspaceClient, error) {
-	provider, workspace, machine, err := getWorkspace(devPodConfig, args, changeLastUsed, log)
-	if err != nil {
-		return nil, err
-	}
-
-	var workspaceClient client.BaseWorkspaceClient
-	if provider.IsProxyProvider() {
-		workspaceClient, err = clientimplementation.NewProxyClient(devPodConfig, provider, workspace, log)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		workspaceClient, err = clientimplementation.NewWorkspaceClient(devPodConfig, provider, workspace, machine, log)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return workspaceClient, nil
-}
-
-func getWorkspace(devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
-	// check if we have no args
-	if len(args) == 0 {
-		return selectWorkspace(devPodConfig, changeLastUsed, log)
-	}
-
-	// check if workspace already exists
-	_, name := file.IsLocalDir(args[0])
-
-	// convert to id
-	workspaceID := ToID(name)
-
-	// already exists?
-	if !provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
-		return nil, nil, nil, fmt.Errorf("workspace %s doesn't exist", workspaceID)
-	}
-
-	// load workspace config
-	return loadExistingWorkspace(workspaceID, devPodConfig, changeLastUsed, log)
-}
-
-// ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(
+// Resolve takes the `devpod up|build` CLI input and either finds an existing workspace or creates a new one
+func Resolve(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	ide string,
@@ -271,14 +34,14 @@ func ResolveWorkspace(
 	devContainerImage string,
 	devContainerPath string,
 	sshConfigPath string,
-	source *provider2.WorkspaceSource,
+	source *providerpkg.WorkspaceSource,
 	uid string,
 	changeLastUsed bool,
 	log log.Logger,
 ) (client.BaseWorkspaceClient, error) {
 	// verify desired id
 	if desiredID != "" {
-		if provider2.ProviderNameRegEx.MatchString(desiredID) {
+		if providerpkg.ProviderNameRegEx.MatchString(desiredID) {
 			return nil, fmt.Errorf("workspace name can only include smaller case letters, numbers or dashes")
 		} else if len(desiredID) > 48 {
 			return nil, fmt.Errorf("workspace name cannot be longer than 48 characters")
@@ -313,7 +76,7 @@ func ResolveWorkspace(
 	if devContainerImage != "" && workspace.DevContainerImage != devContainerImage {
 		workspace.DevContainerImage = devContainerImage
 
-		err = provider2.SaveWorkspaceConfig(workspace)
+		err = providerpkg.SaveWorkspaceConfig(workspace)
 		if err != nil {
 			return nil, errors.Wrap(err, "save workspace")
 		}
@@ -323,7 +86,7 @@ func ResolveWorkspace(
 	if devContainerPath != "" && workspace.DevContainerPath != devContainerPath {
 		workspace.DevContainerPath = devContainerPath
 
-		err = provider2.SaveWorkspaceConfig(workspace)
+		err = providerpkg.SaveWorkspaceConfig(workspace)
 		if err != nil {
 			return nil, errors.Wrap(err, "save workspace")
 		}
@@ -331,7 +94,7 @@ func ResolveWorkspace(
 
 	// configure dev container source
 	if workspace.Source.Container != "" {
-		err = provider2.SaveWorkspaceConfig(workspace)
+		err = providerpkg.SaveWorkspaceConfig(workspace)
 		if err != nil {
 			return nil, errors.Wrap(err, "save workspace")
 		}
@@ -360,6 +123,58 @@ func ResolveWorkspace(
 	return workspaceClient, nil
 }
 
+// Get tries to retrieve an already existing workspace
+func Get(devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (client.BaseWorkspaceClient, error) {
+	var (
+		provider  *providerpkg.ProviderConfig
+		workspace *providerpkg.Workspace
+		machine   *providerpkg.Machine
+		err       error
+	)
+
+	// check if we have no args
+	if len(args) == 0 {
+		provider, workspace, machine, err = selectWorkspace(devPodConfig, changeLastUsed, "", log)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		workspace = findWorkspace(devPodConfig, args, "", log)
+		if workspace == nil {
+			return nil, fmt.Errorf("workspace %s doesn't exist", args[0])
+		}
+		provider, workspace, machine, err = loadExistingWorkspace(devPodConfig, workspace.ID, changeLastUsed, log)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var workspaceClient client.BaseWorkspaceClient
+	if provider.IsProxyProvider() {
+		workspaceClient, err = clientimplementation.NewProxyClient(devPodConfig, provider, workspace, log)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		workspaceClient, err = clientimplementation.NewWorkspaceClient(devPodConfig, provider, workspace, machine, log)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return workspaceClient, nil
+}
+
+// Exists checks if the given workspace already exists
+func Exists(devPodConfig *config.Config, args []string, workspaceID string, log log.Logger) string {
+	workspace := findWorkspace(devPodConfig, args, workspaceID, log)
+	if workspace == nil {
+		return ""
+	}
+
+	return workspace.ID
+}
+
 func resolveWorkspace(
 	ctx context.Context,
 	devPodConfig *config.Config,
@@ -368,18 +183,23 @@ func resolveWorkspace(
 	desiredMachine string,
 	providerUserOptions []string,
 	sshConfigPath string,
-	source *provider2.WorkspaceSource,
+	source *providerpkg.WorkspaceSource,
 	uid string,
 	changeLastUsed bool,
 	log log.Logger,
-) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
+) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
-			return getWorkspace(devPodConfig, []string{desiredID}, changeLastUsed, log)
+			// TODO: Replace
+			workspace := findWorkspace(devPodConfig, nil, desiredID, log)
+			if workspace == nil {
+				return nil, nil, nil, fmt.Errorf("workspace %s doesn't exist", desiredID)
+			}
+			return loadExistingWorkspace(devPodConfig, workspace.ID, changeLastUsed, log)
 		}
 
-		return selectWorkspace(devPodConfig, changeLastUsed, log)
+		return selectWorkspace(devPodConfig, changeLastUsed, sshConfigPath, log)
 	}
 
 	// check if workspace already exists
@@ -390,16 +210,16 @@ func resolveWorkspace(
 
 	// check if desired id already exists
 	if desiredID != "" {
-		if provider2.WorkspaceExists(devPodConfig.DefaultContext, desiredID) {
+		if Exists(devPodConfig, nil, desiredID, log) != "" {
 			log.Infof("Workspace %s already exists", desiredID)
-			return loadExistingWorkspace(desiredID, devPodConfig, changeLastUsed, log)
+			return loadExistingWorkspace(devPodConfig, desiredID, changeLastUsed, log)
 		}
 
 		// set desired id
 		workspaceID = desiredID
-	} else if provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
+	} else if Exists(devPodConfig, nil, workspaceID, log) != "" {
 		log.Infof("Workspace %s already exists", workspaceID)
-		return loadExistingWorkspace(workspaceID, devPodConfig, changeLastUsed, log)
+		return loadExistingWorkspace(devPodConfig, workspaceID, changeLastUsed, log)
 	}
 
 	// create workspace
@@ -432,11 +252,11 @@ func createWorkspace(
 	desiredMachine string,
 	providerUserOptions []string,
 	sshConfigPath string,
-	source *provider2.WorkspaceSource,
+	source *providerpkg.WorkspaceSource,
 	isLocalPath bool,
 	uid string,
 	log log.Logger,
-) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
+) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	// get default provider
 	provider, _, err := LoadProviders(devPodConfig, log)
 	if err != nil {
@@ -445,14 +265,8 @@ func createWorkspace(
 		return nil, nil, nil, fmt.Errorf("provider '%s' is not initialized, please make sure to run 'devpod provider use %s' at least once before using this provider", provider.Config.Name, provider.Config.Name)
 	}
 
-	// get workspace folder
-	workspaceFolder, err := provider2.GetWorkspaceDir(devPodConfig.DefaultContext, workspaceID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
 	// resolve workspace
-	workspace, err := resolve(ctx, provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, uid)
+	workspace, err := resolveWorkspaceConfig(ctx, provider, devPodConfig, name, workspaceID, source, isLocalPath, sshConfigPath, uid)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -464,18 +278,18 @@ func createWorkspace(
 		}
 
 		// check if server exists
-		if !provider2.MachineExists(workspace.Context, desiredMachine) {
+		if !providerpkg.MachineExists(workspace.Context, desiredMachine) {
 			return nil, nil, nil, fmt.Errorf("server %s doesn't exist and cannot be used", desiredMachine)
 		}
 
 		// configure server for workspace
-		workspace.Machine = provider2.WorkspaceMachineConfig{
+		workspace.Machine = providerpkg.WorkspaceMachineConfig{
 			ID: desiredMachine,
 		}
 	}
 
 	// create a new machine
-	var machineConfig *provider2.Machine
+	var machineConfig *providerpkg.Machine
 	if provider.Config.IsMachineProvider() && workspace.Machine.ID == "" {
 		// create a new machine
 		if provider.State != nil && provider.State.SingleMachine {
@@ -492,7 +306,7 @@ func createWorkspace(
 		}
 
 		// only create machine if it does not exist yet
-		if !provider2.MachineExists(devPodConfig.DefaultContext, workspace.Machine.ID) {
+		if !providerpkg.MachineExists(devPodConfig.DefaultContext, workspace.Machine.ID) {
 			// create machine folder
 			machineConfig, err = createMachine(workspace.Context, workspace.Machine.ID, provider.Config.Name)
 			if err != nil {
@@ -523,7 +337,7 @@ func createWorkspace(
 			log.Infof("Reuse existing machine '%s' for workspace '%s'", workspace.Machine.ID, workspace.ID)
 
 			// load machine config
-			machineConfig, err = provider2.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
+			machineConfig, err = providerpkg.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "load machine config")
 			}
@@ -537,7 +351,7 @@ func createWorkspace(
 
 		// load machine config
 		if provider.Config.IsMachineProvider() && workspace.Machine.ID != "" {
-			machineConfig, err = provider2.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
+			machineConfig, err = providerpkg.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "load machine config")
 			}
@@ -547,27 +361,26 @@ func createWorkspace(
 	return provider.Config, workspace, machineConfig, nil
 }
 
-func resolve(
+func resolveWorkspaceConfig(
 	ctx context.Context,
 	defaultProvider *ProviderWithOptions,
 	devPodConfig *config.Config,
 	name,
-	workspaceID,
-	workspaceFolder string,
-	source *provider2.WorkspaceSource,
+	workspaceID string,
+	source *providerpkg.WorkspaceSource,
 	isLocalPath bool,
 	sshConfigPath string,
 	uid string,
-) (*provider2.Workspace, error) {
+) (*providerpkg.Workspace, error) {
 	now := types.Now()
 	if uid == "" {
 		uid = encoding.CreateNewUID(devPodConfig.DefaultContext, workspaceID)
 	}
-	workspace := &provider2.Workspace{
+	workspace := &providerpkg.Workspace{
 		ID:      workspaceID,
 		UID:     uid,
 		Context: devPodConfig.DefaultContext,
-		Provider: provider2.WorkspaceProviderConfig{
+		Provider: providerpkg.WorkspaceProviderConfig{
 			Name: defaultProvider.Config.Name,
 		},
 		CreationTimestamp: now,
@@ -583,7 +396,7 @@ func resolve(
 
 	// is local folder?
 	if isLocalPath {
-		workspace.Source = provider2.WorkspaceSource{
+		workspace.Source = providerpkg.WorkspaceSource{
 			LocalFolder: name,
 		}
 		return workspace, nil
@@ -593,7 +406,7 @@ func resolve(
 	gitRepository, gitPRReference, gitBranch, gitCommit, gitSubdir := git.NormalizeRepository(name)
 	if strings.HasSuffix(name, ".git") || git.PingRepository(gitRepository) {
 		workspace.Picture = getProjectImage(name)
-		workspace.Source = provider2.WorkspaceSource{
+		workspace.Source = providerpkg.WorkspaceSource{
 			GitRepository:  gitRepository,
 			GitPRReference: gitPRReference,
 			GitBranch:      gitBranch,
@@ -607,14 +420,14 @@ func resolve(
 	// is image?
 	_, err := image.GetImage(ctx, name)
 	if err == nil {
-		workspace.Source = provider2.WorkspaceSource{
+		workspace.Source = providerpkg.WorkspaceSource{
 			Image: name,
 		}
 		return workspace, nil
 	}
 
 	// fall back to git repository
-	workspace.Source = provider2.WorkspaceSource{GitRepository: name}
+	workspace.Source = providerpkg.WorkspaceSource{GitRepository: name}
 	if gitRepository != "" {
 		workspace.Source.GitRepository = gitRepository
 	}
@@ -634,135 +447,108 @@ func resolve(
 	return workspace, nil
 }
 
-var contentRegEx = regexp.MustCompile(`content="([^"]+)"`)
-
-var regexes = map[string]*regexp.Regexp{
-	"github.com": regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`),
-	"gitlab.com": regexp.MustCompile(`(<meta[^>]+content)="([^"]+)" property="og:image"`),
-}
-
-func getProjectImage(link string) string {
-	if !strings.HasPrefix(link, "http") &&
-		!strings.HasPrefix(link, "https") {
-		link = "https://" + link
+func findWorkspace(devPodConfig *config.Config, args []string, workspaceID string, log log.Logger) *providerpkg.Workspace {
+	if len(args) == 0 && workspaceID == "" {
+		return nil
 	}
 
-	baseURL, err := url.Parse(link)
+	if workspaceID == "" {
+		// check if workspace already exists
+		_, name := file.IsLocalDir(args[0])
+
+		// convert to id
+		workspaceID = ToID(name)
+	}
+
+	allWorkspaces, err := List(devPodConfig, log)
 	if err != nil {
-		return ""
+		log.Debugf("failed to list workspaces: %v", err)
+		return nil
 	}
 
-	res, err := http.Get(link)
-	if err != nil {
-		return ""
-	}
+	var retWorkspace *providerpkg.Workspace
+	// already exists in all workspaces (including remote)?
+	for _, workspace := range allWorkspaces {
+		if workspace.ID != workspaceID {
+			continue
+		}
 
-	content, err := io.ReadAll(res.Body)
-	_ = res.Body.Close()
-	if err != nil {
-		return ""
-	}
-
-	html := string(content)
-
-	// Find github social share image: https://css-tricks.com/essential-meta-tags-social-media/
-	regEx := regexes[baseURL.Host]
-	if regEx == nil {
-		return ""
-	}
-
-	meta := regEx.FindString(html)
-	parts := strings.Split(
-		contentRegEx.FindString(meta),
-		`"`,
-	)
-
-	if len(parts) >= 2 {
-		return parts[1]
-	}
-
-	return ""
-}
-
-var (
-	workspaceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
-	workspaceIDRegEx2 = regexp.MustCompile(`[^0-9a-z\-]+`)
-)
-
-func ToID(str string) string {
-	str = strings.ToLower(filepath.ToSlash(str))
-	splitted := strings.Split(str, "@")
-	if len(splitted) == 2 {
-		// 1. Check if PR was specified
-		if prReferenceRegEx.MatchString(str) {
-			str = prReferenceRegEx.ReplaceAllStringFunc(splitted[1], git.GetIDForPR)
-		} else {
-			// 2. Check if a branch name has been specified, if so use this for the ID
-			str = strings.TrimSuffix(splitted[1], ".git")
-			// Check if branch name matches expected regex
-			if !branchRegEx.MatchString(str) {
-				str = splitted[0]
+		if workspace.Pro {
+			if err := saveWorkspaceConfig(workspace); err != nil {
+				log.Debugf("failed to save workspace config for workspace \"%s\" with provider \"%s\": %v", workspace.ID, workspace.Provider.Name, err)
+				return nil
 			}
 		}
-	} else {
-		// 3. If not, then parse the repo name as ID
-		index := strings.LastIndex(str, "/")
-		if index != -1 {
-			str = str[index+1:]
 
-			// remove a potential tag / branch name
-			if len(splitted) == 2 && !branchRegEx.MatchString(splitted[1]) {
-				str = splitted[0]
-			}
-
-			// remove .git if there is it
-			str = strings.TrimSuffix(str, ".git")
-		}
+		retWorkspace = workspace
+		break
 	}
 
-	str = workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str, "-"), "")
-	if len(str) > 48 {
-		str = str[:48]
-	}
-
-	return strings.Trim(str, "-")
+	return retWorkspace
 }
 
-func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
+func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, sshConfigPath string, log log.Logger) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	if !terminal.IsTerminalIn {
 		return nil, nil, nil, errProvideWorkspaceArg
 	}
 
-	workspaces, err := ListWorkspaces(devPodConfig, log)
+	workspaces, err := List(devPodConfig, log)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("list workspaces: %w", err)
 	}
 
-	workspaceIDs := []string{}
+	// prepare form options
+	options := []huh.Option[*providerpkg.Workspace]{}
 	for _, workspace := range workspaces {
-		workspaceIDs = append(workspaceIDs, workspace.ID)
+		key := fmt.Sprintf("%s (%s)", workspace.ID, workspace.UID)
+		options = append(options, huh.NewOption(key, workspace))
 	}
 	if len(workspaces) == 0 {
 		return nil, nil, nil, errProvideWorkspaceArg
 	}
 
-	answer, err := log.Question(&survey.QuestionOptions{
-		Question:     "Please select a workspace from the list below",
-		DefaultValue: workspaceIDs[0],
-		Options:      workspaceIDs,
-		Sort:         true,
-	})
-	if err != nil {
+	// create terminal form
+	var selectedWorkspace *providerpkg.Workspace
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[*providerpkg.Workspace]().
+				Title("Please select a workspace from the list below").
+				Options(options...).
+				Value(&selectedWorkspace),
+		),
+	)
+	if err := form.Run(); err != nil {
 		return nil, nil, nil, err
+	}
+	if selectedWorkspace == nil {
+		return nil, nil, nil, fmt.Errorf("no workspace selected")
+	}
+
+	// if selected workspace is pro, save config locally
+	for _, workspace := range workspaces {
+		if workspace.ID == selectedWorkspace.ID && workspace.Pro {
+			if workspace.SSHConfigPath == "" && sshConfigPath != "" {
+				workspace.SSHConfigPath = sshConfigPath
+			}
+			if err := saveWorkspaceConfig(workspace); err != nil {
+				return nil, nil, nil, fmt.Errorf("save workspace config for workspace \"%s\": %w", workspace.ID, err)
+			}
+
+			providerConfig, err := providerpkg.LoadProviderConfig(devPodConfig.DefaultContext, workspace.Provider.Name)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("load provider config for workspace \"%s\" with provider \"%s\": %w", workspace.ID, workspace.Provider.Name, err)
+			}
+
+			return providerConfig, workspace, nil, nil
+		}
 	}
 
 	// load workspace
-	return loadExistingWorkspace(answer, devPodConfig, changeLastUsed, log)
+	return loadExistingWorkspace(devPodConfig, selectedWorkspace.ID, changeLastUsed, log)
 }
 
-func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
-	// TODO: Check if that workspace is remote or not
-	workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
+func loadExistingWorkspace(devPodConfig *config.Config, workspaceID string, changeLastUsed bool, log log.Logger) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
+	workspaceConfig, err := providerpkg.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -775,16 +561,16 @@ func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, chan
 	// save workspace config
 	if changeLastUsed {
 		workspaceConfig.LastUsedTimestamp = types.Now()
-		err = provider2.SaveWorkspaceConfig(workspaceConfig)
+		err = providerpkg.SaveWorkspaceConfig(workspaceConfig)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 	}
 
 	// load machine config
-	var machineConfig *provider2.Machine
+	var machineConfig *providerpkg.Machine
 	if workspaceConfig.Machine.ID != "" {
-		machineConfig, err = provider2.LoadMachineConfig(workspaceConfig.Context, workspaceConfig.Machine.ID)
+		machineConfig, err = providerpkg.LoadMachineConfig(workspaceConfig.Context, workspaceConfig.Machine.ID)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "load machine config")
 		}
@@ -794,40 +580,12 @@ func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, chan
 	return providerWithOptions.Config, workspaceConfig, machineConfig, nil
 }
 
-func saveWorkspaceConfig(workspace *provider2.Workspace) error {
+func saveWorkspaceConfig(workspace *providerpkg.Workspace) error {
 	// save config
-	err := provider2.SaveWorkspaceConfig(workspace)
+	err := providerpkg.SaveWorkspaceConfig(workspace)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func createMachine(context, machineID, providerName string) (*provider2.Machine, error) {
-	// get the machine dir
-	machineDir, err := provider2.GetMachineDir(context, machineID)
-	if err != nil {
-		return nil, err
-	}
-
-	// save machine config
-	machine := &provider2.Machine{
-		ID:      machineID,
-		Context: context,
-		Provider: provider2.MachineProviderConfig{
-			Name: providerName,
-		},
-		CreationTimestamp: types.Now(),
-		Origin:            filepath.Join(machineDir, provider2.MachineConfigFile),
-	}
-
-	// create machine folder
-	err = provider2.SaveMachineConfig(machine)
-	if err != nil {
-		_ = os.RemoveAll(machineDir)
-		return nil, err
-	}
-
-	return machine, nil
 }

@@ -35,5 +35,6 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	c.AddCommand(NewStatusCmd(globalFlags))
 	c.AddCommand(NewDeleteCmd(globalFlags))
 	c.AddCommand(NewRebuildCmd(globalFlags))
+	c.AddCommand(NewWatchCmd(globalFlags))
 	return c
 }

@@ -262,6 +262,9 @@ type ProxyCommands struct {
 
 	// List lists all workspaces associated with this provider
 	List types.StrArray `json:"list,omitempty"`
+
+	// Watch lists all workspaces associated with this provider and then watches for changes
+	Watch types.StrArray `json:"watch,omitempty"`
 }
 
 type SubOptions struct {

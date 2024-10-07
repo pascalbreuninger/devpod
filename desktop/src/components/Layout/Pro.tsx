@@ -34,7 +34,7 @@ import { IconTag } from "../Tag"
 import { Link as ReactRouterLink } from "react-router-dom"
 import { Routes } from "@/routes"
 
-export function Pro() {
+export function ProSwitcher() {
   const [[proInstances]] = useProInstances()
   const { modal: loginProModal, handleOpenLogin: handleConnectClicked } = useLoginProModal()
   const { modal: reLoginProModal, handleOpenLogin: handleReLoginClicked } = useReLoginProModal()

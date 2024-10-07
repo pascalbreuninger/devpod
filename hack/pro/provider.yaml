@@ -43,5 +43,7 @@ exec:
       ${PRO_PROVIDER} pro provider status
     delete: |-
       ${PRO_PROVIDER} pro provider delete
+    watch: |-
+      ${PRO_PROVIDER} pro provider watch
     list: |-
       ${PRO_PROVIDER} pro provider list workspaces

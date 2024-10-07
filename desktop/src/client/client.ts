@@ -183,6 +183,7 @@ class Client {
 
       return Return.Value(releases)
     } catch (e) {
+      // return empty list if error during development
       if (isError(e)) {
         return Return.Failed(e.message)
       }
@@ -379,9 +380,29 @@ class Client {
 export class ProClient {
   constructor(private readonly id: string) {}
 
+  public watchWorkspaces(
+    listener: (newWorkspaces: readonly ManagementV1DevPodWorkspaceInstance[]) => void
+  ) {
+    const cmd = WorkspaceCommands.Watch()
+
+    // kick off stream in the background
+    cmd.stream((event) => {
+      if (event.type === "data") {
+        // FIXME: types
+        listener(event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[])
+      }
+    })
+
+    // Don't await here, we want to return the unsubscribe function
+    return () => {
+      cmd.cancel()
+    }
+  }
+
   public async listWorkspaces(): Promise<Result<ManagementV1DevPodWorkspaceInstance[]>> {
-    WorkspaceCommands.PRO_ID = this.id
-    // FIXME: types
+    // communicate with rust layer
+    // rust has a watch operation
+
     return WorkspaceCommands.ListWorkspaces() as unknown as Result<
       ManagementV1DevPodWorkspaceInstance[]
     >
