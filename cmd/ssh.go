@@ -75,7 +75,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				config.MergeContextOptions(devPodConfig.Current(), os.Environ())
 			}
 
-			client, err := workspace2.GetWorkspace(devPodConfig, args, true, log.Default.ErrorStreamOnly())
+			client, err := workspace2.Get(devPodConfig, args, true, log.Default.ErrorStreamOnly())
 			if err != nil {
 				return err
 			}

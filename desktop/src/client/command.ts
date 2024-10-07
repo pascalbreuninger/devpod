@@ -1,5 +1,5 @@
 import { Child, ChildProcess, EventEmitter, Command as ShellCommand } from "@tauri-apps/api/shell"
-import { debug, isError, Result, ResultError, Return } from "../lib"
+import { debug, isError, Result, ResultError, Return, sleep } from "../lib"
 import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
 
@@ -18,6 +18,7 @@ export class Command implements TCommand<ChildProcess> {
   private sidecarCommand: ShellCommand
   private childProcess?: Child
   private args: string[]
+  private cancelled = false
 
   public static ADDITIONAL_ENV_VARS: string = ""
   public static HTTP_PROXY: string = ""
@@ -78,6 +79,12 @@ export class Command implements TCommand<ChildProcess> {
   public async stream(listener: TStreamEventListenerFn): Promise<ResultError> {
     try {
       this.childProcess = await this.sidecarCommand.spawn()
+      if (this.cancelled) {
+        await this.childProcess.kill()
+
+        return Return.Failed("Command already cancelled")
+      }
+
       await new Promise((res, rej) => {
         const stdoutListener: TEventListener<"data"> = (message) => {
           try {
@@ -146,7 +153,29 @@ export class Command implements TCommand<ChildProcess> {
    */
   public async cancel(): Promise<Result<undefined>> {
     try {
-      await this.childProcess?.kill()
+      this.cancelled = true
+      if (!this.childProcess) {
+        // nothing to clean up
+        return Return.Ok()
+      }
+      // Try to send signal first before force killing process
+      await fetch("http://localhost:25842/child-process/signal", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          processId: this.childProcess.pid,
+          signal: 2, // SIGINT
+        }),
+      })
+
+      await sleep(2_000)
+      // the actual child process could be gone after sending a SIGINT
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (this.childProcess) {
+        await this.childProcess.kill()
+      }
 
       return Return.Ok()
     } catch (e) {

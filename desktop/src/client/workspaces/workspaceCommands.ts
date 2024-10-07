@@ -19,7 +19,6 @@ import {
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_DEVCONTAINER_PATH,
   DEVPOD_FLAG_FORCE,
-  DEVPOD_FLAG_HOST,
   DEVPOD_FLAG_ID,
   DEVPOD_FLAG_IDE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
@@ -40,16 +39,10 @@ export class WorkspaceCommands {
   static DEBUG = false
   static ADDITIONAL_FLAGS = ""
 
-  // TODO: Should be on object, not static
-  static PRO_ID: string | undefined = undefined
-
   private static newCommand(args: string[]): Command {
     const extraFlags = []
     if (WorkspaceCommands.DEBUG) {
       extraFlags.push(DEVPOD_FLAG_DEBUG)
-    }
-    if (WorkspaceCommands.PRO_ID) {
-      extraFlags.push(toFlagArg(DEVPOD_FLAG_HOST, WorkspaceCommands.PRO_ID))
     }
 
     return new Command([...args, ...extraFlags])
@@ -65,11 +58,15 @@ export class WorkspaceCommands {
 
     return Return.Value(
       rawWorkspaces.filter(
-        (workspace): workspace is TWorkspaceWithoutStatus =>
-          // TODO: Uncomment exists(workspace.id)
-          true
+        (workspace): workspace is TWorkspaceWithoutStatus => exists(workspace.id) // TODO: Filter pro workspaces
       )
     )
+  }
+
+  static Watch() {
+    const args = ["watch"]
+
+    return WorkspaceCommands.newCommand(args)
   }
 
   static async FetchWorkspaceStatus(

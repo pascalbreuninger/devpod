@@ -31,7 +31,7 @@ mod workspaces;
 use community_contributions::CommunityContributions;
 use custom_protocol::CustomProtocol;
 use log::{error, info};
-use std::sync::{Arc, Mutex};
+use std::{sync::{Arc, Mutex}, ops::Index};
 use system_tray::SystemTray;
 use tauri::{Manager, Menu, Wry};
 use tokio::sync::mpsc::{self, Sender};
