@@ -1139,7 +1139,7 @@ func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config
 		cmd.SSHConfigPath = devPodConfig.ContextOption(config.ContextOptionSSHConfigPath)
 	}
 
-	client, err := workspace2.ResolveWorkspace(
+	client, err := workspace2.Resolve(
 		ctx,
 		devPodConfig,
 		cmd.IDE,

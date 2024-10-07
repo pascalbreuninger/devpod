@@ -1,7 +1,20 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import { Heading, Link, List, ListItem } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
+import {
+  Box,
+  Heading,
+  Link,
+  List,
+  ListItem,
+  VStack,
+  Text,
+  HStack,
+  Tabs,
+  Tab,
+  TabList,
+  TabPanels,
+  TabPanel,
+} from "@chakra-ui/react"
+import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
+import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
 import {
   Outlet,
   Params,
@@ -12,10 +25,16 @@ import {
 } from "react-router-dom"
 import { App, ErrorPage } from "./App"
 import { client } from "./client"
-import { ProClient } from "./client/client"
 import { WarningMessageBox } from "./components"
-import { TActionID } from "./contexts"
+import { TActionID, useSettings } from "./contexts"
 import { exists } from "./lib"
+import {
+  Source,
+  WorkspaceControls,
+  WorkspaceInstanceCard,
+  WorkspaceInstanceHeader,
+} from "./pro/WorkspaceInstanceCard"
+import { Annotations, Labels } from "./pro/constants"
 import { TProID, TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
 import {
   Action,
@@ -28,6 +47,7 @@ import {
   Settings,
   Workspaces,
 } from "./views"
+import { useIDEs } from "./useIDEs"
 
 export const Routes = {
   ROOT: "/",
@@ -99,10 +119,16 @@ export const Routes = {
   },
   PRO: "/pro",
   PRO_INSTANCE: "/pro/:host",
+  PRO_WORKSPACE: "/pro/:host/:workspace",
   toProInstance(host: string): string {
     const h = host.replaceAll(".", "-")
 
     return `/pro/${h}`
+  },
+  toProWorkspace(host: string, workspaceID: string): string {
+    const base = this.toProInstance(host)
+
+    return `${base}/${workspaceID}`
   },
 } as const
 
@@ -119,6 +145,16 @@ export const router = createBrowserRouter([
           {
             path: Routes.PRO_INSTANCE,
             element: <ProInstance />,
+            children: [
+              {
+                index: true,
+                element: <ListProWorkspaces />,
+              },
+              {
+                path: Routes.PRO_WORKSPACE,
+                element: <ProWorkspace />,
+              },
+            ],
           },
         ],
       },
@@ -158,22 +194,48 @@ export const router = createBrowserRouter([
 ])
 
 function Pro() {
-  return (
-    <>
-      <Outlet />
-    </>
+  return <Outlet />
+}
+
+type TProContext = Readonly<{
+  workspaces: readonly ManagementV1DevPodWorkspaceInstance[]
+}>
+const ProContext = createContext<TProContext>({
+  workspaces: [],
+})
+function ProProvider({ host, children }: { host: string; children: ReactNode }) {
+  const client = useProClient(host)
+  const [workspaces, setWorkspaces] = useState<readonly ManagementV1DevPodWorkspaceInstance[]>([])
+
+  // TODO: Can we merge OSS and pro workspace types here?
+  useEffect(() => {
+    return client.watchWorkspaces((workspaces) => {
+      // sort by last activity (newest > oldest)
+      const sorted = workspaces.slice().sort((a, b) => {
+        const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+        const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+        if (!(lastActivityA && lastActivityB)) {
+          return 0
+        }
+
+        return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
+      })
+      setWorkspaces(sorted)
+    })
+  }, [client])
+
+  const value = useMemo<TProContext>(
+    () => ({
+      workspaces,
+    }),
+    [workspaces]
   )
+
+  return <ProContext.Provider value={value}>{children}</ProContext.Provider>
 }
 
 function ProInstance() {
   const { host } = useParams<{ host: string | undefined }>()
-  // FIXME: Can never be undefined!
-  const client = useProClient(host?.replaceAll("-", ".")!)
-  const { workspaces } = useProWorkspaces(client)
-
-  const handleWorkspaceClicked = (id: string) => {
-    console.log(id)
-  }
 
   if (host == undefined || host.length === 0) {
     return (
@@ -192,19 +254,29 @@ function ProInstance() {
   }
 
   return (
+    <ProProvider host={host.replaceAll("-", ".")}>
+      {" "}
+      <Outlet />
+    </ProProvider>
+  )
+}
+
+function ListProWorkspaces() {
+  const workspaces = useProWorkspaces()
+
+  return (
     <div>
-      <Heading>{host}</Heading>
-      {workspaces && (
-        <List>
-          {workspaces.map((w) => (
-            <ListItem
-              onClick={() => handleWorkspaceClicked(w.metadata!.name!)}
-              key={w.metadata!.name}>
-              {w.metadata?.name}
-            </ListItem>
-          ))}
-        </List>
-      )}
+      <Heading>Workspaces</Heading>
+      <Link as={ReactRouterLink} to="/">
+        Home
+      </Link>
+      <List>
+        {workspaces.map((w) => (
+          <ListItem key={w.metadata!.name}>
+            <WorkspaceInstanceCard instance={w} />
+          </ListItem>
+        ))}
+      </List>
     </div>
   )
 }
@@ -212,25 +284,95 @@ function ProInstance() {
 function useProClient(id: TProID) {
   const c = useMemo(() => {
     return client.getProClient(id)
-  }, [])
+  }, [id])
 
   return c
 }
 
-function useProWorkspaces(client: ProClient) {
-  const {
-    data: workspaces,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["PRO"],
-    queryFn: async () => {
-      const res = (await client.listWorkspaces()).unwrap()
+function useProWorkspaces() {
+  return useContext(ProContext).workspaces
+}
 
-      return res
-    },
-    refetchInterval: 5_000,
-  })
+const DETAILS_TABS = [
+  { label: "Logs", component: <Box w="full" h="full" opacity={0.3} bg="blue" /> },
+  { label: "Files", component: <Box w="full" h="full" opacity={0.3} bg="yellow" /> },
+  { label: "Configuration", component: <Box w="full" h="full" opacity={0.3} bg="orange" /> },
+  { label: "History", component: <Box w="full" h="full" opacity={0.3} bg="green" /> },
+]
+function ProWorkspace() {
+  const params = useParams()
+  const settings = useSettings()
+  const workspaces = useProWorkspaces()
+  const instance = workspaces.find((w) => w.metadata?.name === params.workspace)
+  const { ides, defaultIDE } = useIDEs()
 
-  return { workspaces }
+  if (!instance) {
+    return <>Instance not found</>
+  }
+
+  const isLoading = instance.status?.lastWorkspaceStatus == "loading"
+
+  return (
+    <VStack align="start" width="full" height="full">
+      <VStack align="start" width="full">
+        <Box>
+          <Link as={ReactRouterLink} to={Routes.toProInstance(params.host?.replaceAll("-", ".")!)}>
+            Back to workspaces
+          </Link>
+        </Box>
+        <Box width="full">
+          <WorkspaceInstanceHeader
+            instance={instance}
+            isLoading={isLoading}
+            onActionIndicatorClicked={() => {}}
+            onSelectionChange={() => {}}
+            onCheckStatusClicked={() => {}}>
+            <WorkspaceControls
+              id={instance.metadata!.name!}
+              instance={instance}
+              isLoading={isLoading}
+              isIDEFixed={settings.fixedIDE}
+              ides={ides}
+              ideName={""}
+              setIdeName={() => {}}
+              navigateToAction={() => {}}
+              onRebuildClicked={() => {}}
+              onResetClicked={() => {}}
+              onDeleteClicked={() => {}}
+              onStopClicked={() => {}}
+              onLogsClicked={() => {}}
+            />
+          </WorkspaceInstanceHeader>
+        </Box>
+        <HStack>
+          <Text>{instance.status?.lastWorkspaceStatus}</Text>
+          <Text>{instance.metadata?.labels?.[Labels.WorkspaceUID]}</Text>
+          <Text>
+            {Source.fromRaw(
+              instance.metadata?.annotations?.[Annotations.WorkspaceSource]
+            ).stringify()}
+          </Text>
+          <Text>{instance.spec?.templateRef?.name}</Text>
+          <Text>{instance.spec?.runnerRef?.runner}</Text>
+          <Text>{instance.metadata?.annotations?.[Annotations.SleepModeLastActivity]}</Text>
+        </HStack>
+      </VStack>
+      <Box width="full" height="full">
+        <Tabs isLazy w="full" h="full">
+          <TabList marginBottom="6">
+            {DETAILS_TABS.map(({ label }) => (
+              <Tab key={label}>{label}</Tab>
+            ))}
+          </TabList>
+          <TabPanels w="full" h="full">
+            {DETAILS_TABS.map(({ label, component }) => (
+              <TabPanel w="full" h="full" padding="0" key={label}>
+                {component}
+              </TabPanel>
+            ))}
+          </TabPanels>
+        </Tabs>
+      </Box>
+    </VStack>
+  )
 }

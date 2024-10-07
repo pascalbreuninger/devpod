@@ -7,6 +7,7 @@ import {
   Grid,
   GridItem,
   GridProps,
+  HStack,
   Link,
   Text,
   VStack,
@@ -16,7 +17,14 @@ import {
 import { ReactNode, useEffect, useMemo } from "react"
 import { Outlet, Link as RouterLink, useMatch, useNavigate, useRouteError } from "react-router-dom"
 import { useBorderColor } from "./Theme"
-import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
+import {
+  Notifications,
+  ProSwitcher,
+  Sidebar,
+  SidebarMenuItem,
+  StatusBar,
+  Toolbar,
+} from "./components"
 import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
 import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
 import { Briefcase, Cog, Stack3D } from "./icons"
@@ -28,8 +36,6 @@ import { usePreserveLocation } from "./usePreserveLocation"
 
 const showTitleBar = isMacOS || isLinux || isWindows
 const titleBarSafeArea: BoxProps["height"] = showTitleBar ? "12" : 0
-
-const showDevPodTitle = isMacOS || isLinux
 
 export function App() {
   const routeMatchPro = useMatch(`${Routes.PRO}/*`)
@@ -60,6 +66,7 @@ function OSSApp({ changelogModal, proLoginModal, errorModal }: TOSSAppProps) {
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
   const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
   const borderColor = useBorderColor()
+  const showTitle = isMacOS || isLinux
 
   const mainGridProps = useMemo<GridProps>(() => {
     if (sidebarPosition === "right") {
@@ -79,8 +86,8 @@ function OSSApp({ changelogModal, proLoginModal, errorModal }: TOSSAppProps) {
 
   return (
     <>
-      <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
-        {showTitleBar && <TitleBar />}
+      <Flex width="100vw" maxWidth="100vw" overflow="hidden">
+        {showTitleBar && <TitleBar showTitle={showTitle} />}
 
         <Box width="full" height="full">
           <Grid height="full" {...mainGridProps}>
@@ -113,8 +120,30 @@ function OSSApp({ changelogModal, proLoginModal, errorModal }: TOSSAppProps) {
                     height={toolbarHeight}
                     position="sticky"
                     zIndex={1}
-                    width="full"
-                  />
+                    width="full">
+                    <Grid
+                      alignContent="center"
+                      templateRows="1fr"
+                      templateColumns="minmax(auto, 18rem) 3fr fit-content(15rem)"
+                      width="full"
+                      paddingX="4">
+                      <GridItem display="flex" alignItems="center">
+                        <Toolbar.Title />
+                      </GridItem>
+                      <GridItem
+                        marginLeft={2}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="start"
+                        columnGap={4}>
+                        <Toolbar.Actions />
+                      </GridItem>
+                      <GridItem display="flex" alignItems="center" justifyContent="center">
+                        <Notifications />
+                        <ProSwitcher />
+                      </GridItem>
+                    </Grid>
+                  </Toolbar>
                   <Box
                     as="main"
                     paddingTop="8"
@@ -132,8 +161,19 @@ function OSSApp({ changelogModal, proLoginModal, errorModal }: TOSSAppProps) {
                     width={`calc(100% - ${SIDEBAR_WIDTH})`}
                     borderTopWidth="thin"
                     borderTopColor={borderColor}
-                    backgroundColor={contentBackgroundColor}
-                  />
+                    backgroundColor={contentBackgroundColor}>
+                    <HStack>
+                      <StatusBar.Version />
+                    </HStack>
+
+                    <HStack>
+                      <StatusBar.ZoomMenu />
+                      <StatusBar.GitHubStar />
+                      <StatusBar.OSSDocs />
+                      <StatusBar.OSSReportIssue />
+                      <StatusBar.DebugMenu />
+                    </HStack>
+                  </StatusBar>
                 </Box>
               </ToolbarProvider>
             </GridItem>
@@ -152,31 +192,66 @@ function OSSApp({ changelogModal, proLoginModal, errorModal }: TOSSAppProps) {
 type TProAppProps = TAppProps
 function ProApp({ errorModal, changelogModal }: TProAppProps) {
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
-  const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
+  const toolbarHeight = useToken("sizes", "10")
+  const borderColor = useBorderColor()
 
   return (
     <>
-      <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
-        {showTitleBar && <TitleBar />}
+      <Flex width="100vw" maxWidth="100vw" overflow="hidden">
         <Box width="full" height="full">
-          <Box
-            data-tauri-drag-region // keep!
-            backgroundColor={contentBackgroundColor}
-            position="relative"
-            width="full"
-            height="full"
-            overflowY="auto">
+          <ToolbarProvider>
             <Box
-              as="main"
-              paddingTop="8"
-              paddingBottom={STATUS_BAR_HEIGHT}
-              paddingX="8"
+              data-tauri-drag-region // keep!
+              backgroundColor={contentBackgroundColor}
+              position="relative"
               width="full"
-              height={`calc(100vh - ${toolbarHeight})`}
+              height="full"
               overflowY="auto">
-              <Outlet />
+              <Toolbar
+                backgroundColor={contentBackgroundColor}
+                height={toolbarHeight}
+                position="sticky"
+                width="full">
+                <HStack
+                  justifyContent="space-between"
+                  data-tauri-drag-region // keep!
+                >
+                  <HStack>
+                    <Box>Company Info</Box>
+                    <Box>Project Selection</Box>
+                  </HStack>
+                  <HStack>
+                    <Box>S</Box>
+                    <Notifications />
+                  </HStack>
+                </HStack>
+              </Toolbar>
+              <Box
+                as="main"
+                paddingTop="8"
+                paddingBottom={STATUS_BAR_HEIGHT}
+                paddingX="8"
+                width="full"
+                height={`calc(100vh - ${toolbarHeight})`}
+                overflowY="auto">
+                <Outlet />
+              </Box>
+              <StatusBar
+                height={STATUS_BAR_HEIGHT}
+                position="fixed"
+                bottom="0"
+                width="full"
+                borderTopWidth="thin"
+                borderTopColor={borderColor}
+                backgroundColor={contentBackgroundColor}>
+                <HStack />
+                <HStack>
+                  <StatusBar.Version />
+                  <StatusBar.DebugMenu />
+                </HStack>
+              </StatusBar>
             </Box>
-          </Box>
+          </ToolbarProvider>
         </Box>
       </Flex>
 
@@ -186,7 +261,10 @@ function ProApp({ errorModal, changelogModal }: TProAppProps) {
   )
 }
 
-function TitleBar() {
+type TTitleBarProps = Readonly<{
+  showTitle?: boolean
+}>
+function TitleBar({ showTitle = true }: TTitleBarProps) {
   return (
     <Box
       data-tauri-drag-region // keep!
@@ -195,9 +273,9 @@ function TitleBar() {
       top="0"
       width="full"
       textAlign="center"
-      zIndex="dropdown"
+      zIndex="modal"
       justifyItems="center">
-      {showDevPodTitle && (
+      {showTitle && (
         <Text
           data-tauri-drag-region // keep!
           fontWeight="bold"
