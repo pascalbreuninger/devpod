@@ -17,9 +17,9 @@ import {
 } from "@chakra-ui/react"
 import Markdown from "markdown-to-jsx"
 import { useEffect, useMemo, useState } from "react"
-import { client } from "./client"
-import { Release } from "./gen"
-import { useReleases, useVersion } from "./lib"
+import { client } from "../client"
+import { Release } from "../gen"
+import { useReleases, useVersion } from "../lib"
 
 const LAST_INSTALLED_VERSION_KEY = "devpod-last-installed-version"
 type TLinkClickEvent = React.MouseEvent<HTMLLinkElement> & { target: HTMLLinkElement }

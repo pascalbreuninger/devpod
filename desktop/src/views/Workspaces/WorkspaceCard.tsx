@@ -103,7 +103,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
     onClose: onChangeOptionsClose,
   } = useDisclosure()
 
-  const workspace = useWorkspace(workspaceID)
+  const workspace = useWorkspace<TWorkspace>(workspaceID)
   const [provider] = useProvider(workspace.data?.provider?.name)
   const [ideName, setIdeName] = useState<string | undefined>(() => {
     if (settings.fixedIDE && defaultIDE?.name) {
@@ -532,7 +532,7 @@ function WorkspaceCardHeader({
 
 type TWorkspaceControlsProps = Readonly<{
   id: TWorkspaceID
-  workspace: TWorkspaceResult
+  workspace: TWorkspaceResult<TWorkspace>
   provider: TProvider | undefined
   isIDEFixed: boolean
   isLoading: boolean

@@ -1,22 +1,17 @@
 import {
   Box,
-  BoxProps,
-  Code,
-  Container,
   Flex,
   Grid,
   GridItem,
   GridProps,
   HStack,
-  Link,
   Text,
-  VStack,
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
-import { ReactNode, useEffect, useMemo } from "react"
-import { Outlet, Link as RouterLink, useMatch, useNavigate, useRouteError } from "react-router-dom"
-import { useBorderColor } from "./Theme"
+import { useEffect, useMemo } from "react"
+import { Outlet, useMatch, useNavigate } from "react-router-dom"
+import { useBorderColor } from "../Theme"
 import {
   Notifications,
   ProSwitcher,
@@ -24,43 +19,18 @@ import {
   SidebarMenuItem,
   StatusBar,
   Toolbar,
-  ToolbarActions,
-} from "./components"
-import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
-import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
-import { Briefcase, Cog, Stack3D } from "./icons"
-import { isLinux, isMacOS, isWindows } from "./lib"
-import { Routes } from "./routes"
+} from "../components"
+import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "../constants"
+import { ToolbarProvider, useSettings } from "../contexts"
+import { Briefcase, Cog, Stack3D } from "../icons"
+import { isLinux, isMacOS } from "../lib"
+import { Routes } from "../routes"
+import { useWelcomeModal } from "../useWelcomeModal"
+import { showTitleBar, titleBarSafeArea } from "./constants"
 import { useAppReady } from "./useAppReady"
-import { useWelcomeModal } from "./useWelcomeModal"
-import { usePreserveLocation } from "./usePreserveLocation"
 
-const showTitleBar = isMacOS || isLinux || isWindows
-const titleBarSafeArea: BoxProps["height"] = showTitleBar ? "12" : 0
-
-export function App() {
-  const routeMatchPro = useMatch(`${Routes.PRO}/*`)
+export function OSSApp() {
   const { errorModal, changelogModal, proLoginModal } = useAppReady()
-  usePreserveLocation()
-  usePartyParrot()
-
-  return routeMatchPro == null ? (
-    <OSSApp changelogModal={changelogModal} errorModal={errorModal} proLoginModal={proLoginModal} />
-  ) : (
-    <ProApp changelogModal={changelogModal} errorModal={errorModal} />
-  )
-}
-
-type TAppProps = Readonly<{
-  errorModal: ReactNode
-  changelogModal: ReactNode
-}>
-
-type TOSSAppProps = TAppProps &
-  Readonly<{
-    proLoginModal: ReactNode
-  }>
-function OSSApp({ changelogModal, proLoginModal, errorModal }: TOSSAppProps) {
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
@@ -190,89 +160,6 @@ function OSSApp({ changelogModal, proLoginModal, errorModal }: TOSSAppProps) {
   )
 }
 
-type TProAppProps = TAppProps
-function ProApp({ errorModal, changelogModal }: TProAppProps) {
-  const contentBackgroundColor = useColorModeValue("white", "background.darkest")
-  const toolbarHeight = useToken("sizes", "10")
-  const borderColor = useBorderColor()
-  // TODO: load company info
-  // TODO: load projects
-  // Pass host or provider to CLI
-
-  return (
-    <>
-      <Flex width="100vw" maxWidth="100vw" overflow="hidden">
-        <Box width="full" height="full">
-          <ToolbarProvider>
-            <Box
-              data-tauri-drag-region // keep!
-              backgroundColor={contentBackgroundColor}
-              position="relative"
-              width="full"
-              height="full"
-              overflowY="auto">
-              <Toolbar
-                backgroundColor={contentBackgroundColor}
-                height={toolbarHeight}
-                position="sticky"
-                width="full">
-                <HStack
-                  justifyContent="space-between"
-                  paddingLeft="24" // TODO: Check on other platforms
-                  data-tauri-drag-region // keep!
-                >
-                  <HStack gap="4">
-                    <Box>
-                      <Toolbar.Title />
-                    </Box>
-                    <Box>
-                      <Toolbar.Actions />
-                    </Box>
-                  </HStack>
-                  <HStack>
-                    <Link as={RouterLink} to={Routes.SETTINGS}>
-                      {/* TODO: Pro settings! */}
-                      <Cog />
-                    </Link>
-                    <Notifications />
-                  </HStack>
-                </HStack>
-              </Toolbar>
-              <Box
-                as="main"
-                paddingTop="8"
-                paddingBottom={STATUS_BAR_HEIGHT}
-                paddingX="8"
-                width="full"
-                height={`calc(100vh - ${toolbarHeight})`}
-                overflowY="auto">
-                <Outlet />
-              </Box>
-              <StatusBar
-                height={STATUS_BAR_HEIGHT}
-                position="fixed"
-                bottom="0"
-                width="full"
-                borderTopWidth="thin"
-                borderTopColor={borderColor}
-                backgroundColor={contentBackgroundColor}>
-                <HStack />
-                <HStack>
-                  <StatusBar.Version />
-                  <StatusBar.DebugMenu />
-                </HStack>
-              </StatusBar>
-            </Box>
-          </ToolbarProvider>
-        </Box>
-      </Flex>
-
-      {errorModal}
-      {changelogModal}
-    </>
-  )
-}
-
 type TTitleBarProps = Readonly<{
   showTitle?: boolean
 }>
@@ -297,41 +184,4 @@ function TitleBar({ showTitle = true }: TTitleBarProps) {
       )}
     </Box>
   )
-}
-
-export function ErrorPage() {
-  const error = useRouteError()
-  const contentBackgroundColor = useColorModeValue("white", "black")
-
-  return (
-    <Box height="100vh" width="100vw" backgroundColor={contentBackgroundColor}>
-      <Container padding="16">
-        <VStack>
-          <Text>Whoops, something went wrong or this page doesn&apos;t exist.</Text>
-          <Box paddingBottom="6">
-            <Link as={RouterLink} to={Routes.ROOT}>
-              Go back to home
-            </Link>
-          </Box>
-          <Code>{JSON.stringify(error, null, 2)}</Code>{" "}
-        </VStack>
-      </Container>
-    </Box>
-  )
-}
-
-function usePartyParrot() {
-  const { set: setSettings, settings } = useChangeSettings()
-
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (event.shiftKey && event.ctrlKey && event.key.toLowerCase() === "p") {
-        const current = settings.partyParrot
-        setSettings("partyParrot", !current)
-      }
-    }
-    document.addEventListener("keyup", handler)
-
-    return () => document.addEventListener("keyup", handler)
-  }, [setSettings, settings.partyParrot])
 }

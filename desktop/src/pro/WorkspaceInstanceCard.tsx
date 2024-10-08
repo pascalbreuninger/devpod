@@ -304,11 +304,11 @@ export function WorkspaceInstanceHeader({
     // TODO: Implement
     //
     return false
-    if (!workspaceActions?.length || workspaceActions[0]?.status !== "error") {
-      return false
-    }
-
-    return true
+    // if (!workspaceActions?.length || workspaceActions[0]?.status !== "error") {
+    //   return false
+    // }
+    //
+    // return true
   }, [])
 
   // const ideDisplayName =
