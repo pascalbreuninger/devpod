@@ -3,9 +3,9 @@ import { createContext, ReactNode, useMemo } from "react"
 import { client } from "../../client"
 import { QueryKeys } from "../../queryKeys"
 import { TProInstances, TProviders, TQueryResult } from "../../types"
+import { useChangeSettings } from "../SettingsContext"
 import { REFETCH_INTERVAL_MS, REFETCH_PROVIDER_INTERVAL_MS } from "./constants"
 import { usePollWorkspaces } from "./workspaces"
-import { useChangeSettings } from "../SettingsContext"
 
 export type TDevpodContext = Readonly<{
   providers: TQueryResult<TProviders>
@@ -15,13 +15,13 @@ export const DevPodContext = createContext<TDevpodContext>(null!)
 
 export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>) {
   const { set } = useChangeSettings()
-  // usePollWorkspaces() // FIXME: Uncomment
+  usePollWorkspaces()
 
   const providersQuery = useQuery({
     queryKey: QueryKeys.PROVIDERS,
     queryFn: async () => (await client.providers.listAll()).unwrap(),
     refetchInterval: REFETCH_PROVIDER_INTERVAL_MS,
-    enabled: false, // FIXME: undo
+    enabled: true,
   })
 
   const proInstancesQuery = useQuery({

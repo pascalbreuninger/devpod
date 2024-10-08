@@ -1,33 +1,48 @@
 import {
   Box,
+  Button,
+  HStack,
   Heading,
   Link,
   List,
   ListItem,
-  VStack,
-  Text,
-  HStack,
-  Tabs,
+  Menu,
+  MenuButton,
+  MenuItemOption,
+  MenuList,
   Tab,
   TabList,
-  TabPanels,
   TabPanel,
+  TabPanels,
+  Tabs,
+  Text,
+  VStack,
 } from "@chakra-ui/react"
+import { getProjectNamespace } from "@loft-enterprise/client"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
+import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
+import { useQuery } from "@tanstack/react-query"
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
 import {
   Outlet,
   Params,
   Path,
-  Link as ReactRouterLink,
+  Link as RouterLink,
   createBrowserRouter,
   useParams,
 } from "react-router-dom"
 import { App, ErrorPage } from "./App"
 import { client } from "./client"
 import { ToolbarActions, ToolbarTitle, WarningMessageBox } from "./components"
-import { TActionID, useProInstances, useSettings } from "./contexts"
+import {
+  ProWorkspaceStore,
+  TActionID,
+  WorkspaceStoreProvider,
+  useSettings,
+  useWorkspaceStore,
+} from "./contexts"
 import { exists } from "./lib"
+import { getDisplayName } from "./lib/pro"
 import {
   Source,
   WorkspaceControls,
@@ -36,8 +51,9 @@ import {
 } from "./pro/WorkspaceInstanceCard"
 import { Annotations, Labels } from "./pro/constants"
 import { TProID, TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
+import { useIDEs } from "./useIDEs"
 import {
-  Action,
+  Action as ActionView,
   Actions,
   CreateWorkspace,
   ListProviders,
@@ -47,8 +63,6 @@ import {
   Settings,
   Workspaces,
 } from "./views"
-import { useIDEs } from "./useIDEs"
-import { useQuery } from "@tanstack/react-query"
 
 export const Routes = {
   ROOT: "/",
@@ -187,7 +201,7 @@ export const router = createBrowserRouter([
       {
         path: Routes.ACTIONS,
         element: <Actions />,
-        children: [{ path: Routes.ACTION, element: <Action /> }],
+        children: [{ path: Routes.ACTION, element: <ActionView /> }],
       },
       { path: Routes.SETTINGS, element: <Settings /> },
     ],
@@ -205,8 +219,15 @@ const ProContext = createContext<TProContext>({
   workspaces: [],
 })
 function ProProvider({ host, children }: { host: string; children: ReactNode }) {
+  const { store } = useWorkspaceStore<ProWorkspaceStore>()
   const client = useProClient(host)
-  const [workspaces, setWorkspaces] = useState<readonly ManagementV1DevPodWorkspaceInstance[]>([])
+  const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
+  const { data: managementSelf } = useQuery({
+    queryKey: ["managementSelf"],
+    queryFn: async () => {
+      return (await client.getSelf()).unwrap()
+    },
+  })
 
   const { data: projects } = useQuery({
     queryKey: ["pro", host, "projects"],
@@ -214,6 +235,31 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
       return (await client.listProjects()).unwrap()
     },
   })
+
+  const currentProject = useMemo<ManagementV1Project | undefined>(() => {
+    if (selectedProject) {
+      return selectedProject
+    }
+
+    return projects?.[0]
+  }, [projects, selectedProject])
+
+  const workspaces = useMemo(() => {
+    if (!currentProject) {
+      return []
+    }
+
+    return store
+      .getAll()
+      .filter(
+        (w) =>
+          w.metadata?.namespace ==
+          getProjectNamespace(
+            currentProject.metadata?.name,
+            managementSelf?.status?.projectNamespacePrefix
+          )
+      )
+  }, [currentProject, managementSelf?.status?.projectNamespacePrefix, store])
 
   // TODO: Can we merge OSS and pro workspace types here?
   useEffect(() => {
@@ -228,9 +274,13 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
 
         return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
       })
-      setWorkspaces(sorted)
+      store.setWorkspaces(sorted)
     })
-  }, [client])
+  }, [client, store])
+
+  const handleProjectChanged = (newProject: ManagementV1Project) => {
+    setSelectedProject(newProject)
+  }
 
   const value = useMemo<TProContext>(() => ({ workspaces }), [workspaces])
 
@@ -239,7 +289,15 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
       <ToolbarTitle>
         <Text fontWeight="semibold">{host}</Text>
       </ToolbarTitle>
-      <ToolbarActions>Project Selection goes here!</ToolbarActions>
+      <ToolbarActions>
+        {projects && projects.length > 0 && currentProject != undefined && (
+          <ProjectPicker
+            projects={projects}
+            currentProject={currentProject}
+            onChanged={handleProjectChanged}
+          />
+        )}
+      </ToolbarActions>
       {children}
     </ProContext.Provider>
   )
@@ -248,6 +306,12 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
 function ProInstance() {
   const { host } = useParams<{ host: string | undefined }>()
 
+  const store = useMemo(() => {
+    const realHost = host?.replaceAll("-", ".")
+
+    return new ProWorkspaceStore()
+  }, [host])
+
   if (host == undefined || host.length === 0) {
     return (
       <WarningMessageBox
@@ -255,7 +319,7 @@ function ProInstance() {
           <>
             Pro Instance not found
             <br />
-            <Link as={ReactRouterLink} to={Routes.ROOT}>
+            <Link as={RouterLink} to={Routes.ROOT}>
               Go back
             </Link>
           </>
@@ -265,10 +329,11 @@ function ProInstance() {
   }
 
   return (
-    <ProProvider host={host.replaceAll("-", ".")}>
-      {" "}
-      <Outlet />
-    </ProProvider>
+    <WorkspaceStoreProvider store={store}>
+      <ProProvider host={host.replaceAll("-", ".")}>
+        <Outlet />
+      </ProProvider>
+    </WorkspaceStoreProvider>
   )
 }
 
@@ -278,7 +343,7 @@ function ListProWorkspaces() {
   return (
     <div>
       <Heading>Workspaces</Heading>
-      <Link as={ReactRouterLink} to="/">
+      <Link as={RouterLink} to="/">
         Home
       </Link>
       <List>
@@ -327,7 +392,7 @@ function ProWorkspace() {
     <VStack align="start" width="full" height="full">
       <VStack align="start" width="full">
         <Box>
-          <Link as={ReactRouterLink} to={Routes.toProInstance(params.host?.replaceAll("-", ".")!)}>
+          <Link as={RouterLink} to={Routes.toProInstance(params.host?.replaceAll("-", ".")!)}>
             Back to workspaces
           </Link>
         </Box>
@@ -385,5 +450,33 @@ function ProWorkspace() {
         </Tabs>
       </Box>
     </VStack>
+  )
+}
+
+type TProjectPickerProps = Readonly<{
+  currentProject: ManagementV1Project
+  projects: readonly ManagementV1Project[]
+  onChanged: (newProject: ManagementV1Project) => void
+}>
+function ProjectPicker({ currentProject, projects, onChanged }: TProjectPickerProps) {
+  return (
+    <Menu closeOnSelect={true} offset={[0, 2]}>
+      <MenuButton as={Button} variant="unstyled">
+        {getDisplayName(currentProject)}
+      </MenuButton>
+      <MenuList>
+        {projects.map((project) => {
+          const id = project.metadata!.name!
+
+          return (
+            <MenuItemOption onClick={() => onChanged(project)} key={id} value={id}>
+              <HStack>
+                <Text>{getDisplayName(project)}</Text>
+              </HStack>
+            </MenuItemOption>
+          )
+        })}
+      </MenuList>
+    </Menu>
   )
 }

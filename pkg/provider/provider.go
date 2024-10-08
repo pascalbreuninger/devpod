@@ -260,6 +260,9 @@ type ProxyCommands struct {
 	// Status proxies the status command
 	Status types.StrArray `json:"status,omitempty"`
 
+	// Self fetches self for this provider
+	Self types.StrArray `json:"self,omitempty"`
+
 	// List lists all entities associated with this provider
 	List ListProxyCommands `json:"list,omitempty"`
 

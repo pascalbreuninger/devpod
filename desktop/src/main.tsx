@@ -6,9 +6,9 @@ import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 import { RouterProvider } from "react-router"
 import "xterm/css/xterm.css"
-import { DevPodProvider, SettingsProvider } from "./contexts"
-import { router } from "./routes"
 import { ThemeProvider } from "./Theme"
+import { SettingsProvider } from "./contexts"
+import { router } from "./routes"
 
 dayjs.extend(relativeTime)
 
@@ -41,9 +41,7 @@ function Root() {
       <SettingsProvider>
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
-            <DevPodProvider>
-              <RouterProvider router={router} />
-            </DevPodProvider>
+            <RouterProvider router={router} />
             {/* Will be disabled in production automatically */}
             <ReactQueryDevtools
               position="bottom-right"

@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { Location, useLocation } from "react-router"
-import { LocalStorageBackend, Store } from "./lib"
-import { client } from "./client"
+import { LocalStorageBackend, Store } from "../lib"
+import { client } from "../client"
 
 const LOCATION_KEY = "location"
 const CURRENT_LOCATION_KEY = "current"

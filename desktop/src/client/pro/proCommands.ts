@@ -9,6 +9,7 @@ import {
   DEVPOD_COMMAND_PRO,
   DEVPOD_FLAG_ACCESS_KEY,
   DEVPOD_FLAG_DEBUG,
+  DEVPOD_FLAG_HOST,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_LOGIN,
@@ -131,8 +132,23 @@ export class ProCommands {
     return Return.Ok()
   }
 
-  static Watch(id: TProID) {
-    const args = [DEVPOD_COMMAND_PRO, "watch", "--host=" + id]
+  static WatchWorkspaces(id: TProID) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const args = [DEVPOD_COMMAND_PRO, "watch", "workspaces", hostFlag]
+
+    return ProCommands.newCommand(args)
+  }
+
+  static ListProjects(id: TProID) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const args = [DEVPOD_COMMAND_PRO, "list-projects", hostFlag]
+
+    return ProCommands.newCommand(args)
+  }
+
+  static GetSelf(id: TProID) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const args = [DEVPOD_COMMAND_PRO, "self", hostFlag]
 
     return ProCommands.newCommand(args)
   }

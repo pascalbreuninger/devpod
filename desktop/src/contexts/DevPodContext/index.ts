@@ -13,3 +13,9 @@ export {
   useWorkspaceActions,
   startWorkspaceAction,
 } from "./workspaces"
+export {
+  WorkspaceStoreProvider,
+  useWorkspaceStore,
+  WorkspaceStore,
+  ProWorkspaceStore,
+} from "./workspaceStore"
