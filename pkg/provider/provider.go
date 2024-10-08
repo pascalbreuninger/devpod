@@ -260,11 +260,24 @@ type ProxyCommands struct {
 	// Status proxies the status command
 	Status types.StrArray `json:"status,omitempty"`
 
-	// List lists all workspaces associated with this provider
-	List types.StrArray `json:"list,omitempty"`
+	// List lists all entities associated with this provider
+	List ListProxyCommands `json:"list,omitempty"`
 
-	// Watch lists all workspaces associated with this provider and then watches for changes
-	Watch types.StrArray `json:"watch,omitempty"`
+	// Watch lists all entities associated with this provider and then watches for changes
+	Watch WatchProxyCommands `json:"watch,omitempty"`
+}
+
+type ListProxyCommands struct {
+	// Workspaces lists all workspaces
+	Workspaces types.StrArray `json:"workspaces,omitempty"`
+
+	// Projects lists all workspaces
+	Projects types.StrArray `json:"projects,omitempty"`
+}
+
+type WatchProxyCommands struct {
+	// Workspaces watches all workspaces and updates on changes
+	Workspaces types.StrArray `json:"workspaces,omitempty"`
 }
 
 type SubOptions struct {

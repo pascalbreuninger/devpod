@@ -3,7 +3,6 @@ import { TActionID, TActionName, TActionObj } from "../../contexts"
 import { Result, ResultError, Return, THandler, exists, isError, noop } from "../../lib"
 import {
   TDevcontainerSetup,
-  TProID,
   TStreamID,
   TUnsubscribeFn,
   TWorkspace,

@@ -1,1 +1,0 @@
-export { ProInstancesClient } from "./client"

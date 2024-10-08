@@ -25,8 +25,8 @@ import {
 } from "react-router-dom"
 import { App, ErrorPage } from "./App"
 import { client } from "./client"
-import { WarningMessageBox } from "./components"
-import { TActionID, useSettings } from "./contexts"
+import { ToolbarActions, ToolbarTitle, WarningMessageBox } from "./components"
+import { TActionID, useProInstances, useSettings } from "./contexts"
 import { exists } from "./lib"
 import {
   Source,
@@ -48,6 +48,7 @@ import {
   Workspaces,
 } from "./views"
 import { useIDEs } from "./useIDEs"
+import { useQuery } from "@tanstack/react-query"
 
 export const Routes = {
   ROOT: "/",
@@ -207,6 +208,13 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
   const client = useProClient(host)
   const [workspaces, setWorkspaces] = useState<readonly ManagementV1DevPodWorkspaceInstance[]>([])
 
+  const { data: projects } = useQuery({
+    queryKey: ["pro", host, "projects"],
+    queryFn: async () => {
+      return (await client.listProjects()).unwrap()
+    },
+  })
+
   // TODO: Can we merge OSS and pro workspace types here?
   useEffect(() => {
     return client.watchWorkspaces((workspaces) => {
@@ -224,14 +232,17 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
     })
   }, [client])
 
-  const value = useMemo<TProContext>(
-    () => ({
-      workspaces,
-    }),
-    [workspaces]
-  )
+  const value = useMemo<TProContext>(() => ({ workspaces }), [workspaces])
 
-  return <ProContext.Provider value={value}>{children}</ProContext.Provider>
+  return (
+    <ProContext.Provider value={value}>
+      <ToolbarTitle>
+        <Text fontWeight="semibold">{host}</Text>
+      </ToolbarTitle>
+      <ToolbarActions>Project Selection goes here!</ToolbarActions>
+      {children}
+    </ProContext.Provider>
+  )
 }
 
 function ProInstance() {

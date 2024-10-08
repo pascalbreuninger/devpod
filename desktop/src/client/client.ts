@@ -13,21 +13,19 @@ import {
   window as tauriWindow,
   updater,
 } from "@tauri-apps/api"
-import * as log from "@tauri-apps/plugin-log"
 import { Command } from "@tauri-apps/api/shell"
 import { Theme as TauriTheme } from "@tauri-apps/api/window"
+import * as log from "@tauri-apps/plugin-log"
 import { TSettings } from "../contexts"
 import { Release } from "../gen"
 import { Result, Return, isError, noop } from "../lib"
 import { TCommunityContributions, TProID, TUnsubscribeFn } from "../types"
+import { Command as DevPodCommand } from "./command"
 import { ContextClient } from "./context"
 import { IDEsClient } from "./ides"
-import { ProInstancesClient } from "./proInstances"
+import { ProClient } from "./pro"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
-import { Command as DevPodCommand } from "./command"
-import { WorkspaceCommands } from "./workspaces/workspaceCommands"
-import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -83,7 +81,7 @@ class Client {
   public readonly providers = new ProvidersClient()
   public readonly ides = new IDEsClient()
   public readonly context = new ContextClient()
-  public readonly proInstances = new ProInstancesClient()
+  public readonly pro = new ProClient("")
 
   public setSetting<TSettingName extends keyof TClientSettings>(
     name: TSettingName,
@@ -95,7 +93,7 @@ class Client {
       this.workspaces.setDebug(debug)
       this.providers.setDebug(debug)
       this.ides.setDebug(debug)
-      this.proInstances.setDebug(debug)
+      this.pro.setDebug(debug)
     }
     if (name === "additionalCliFlags") {
       this.workspaces.setAdditionalFlags(value as string)
@@ -366,49 +364,16 @@ class Client {
     return tauriWindow.appWindow.theme()
   }
 
-  public getProClient(id: TProID): ProClient {
-    return new ProClient(id)
-  }
-
   public log(level: "debug" | "info" | "warn" | "error", message: string) {
     const logFn = log[level]
     logFn(message)
   }
-}
 
-// TODO: Move to separate file
-export class ProClient {
-  constructor(private readonly id: string) {}
-
-  public watchWorkspaces(
-    listener: (newWorkspaces: readonly ManagementV1DevPodWorkspaceInstance[]) => void
-  ) {
-    const cmd = WorkspaceCommands.Watch()
-
-    // kick off stream in the background
-    cmd.stream((event) => {
-      if (event.type === "data") {
-        // FIXME: types
-        listener(event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[])
-      }
-    })
-
-    // Don't await here, we want to return the unsubscribe function
-    return () => {
-      cmd.cancel()
-    }
+  // TODO: map with all id:client combinations in this class?
+  // Easier debug settings...
+  public getProClient(id: TProID): ProClient {
+    return new ProClient(id)
   }
-
-  public async listWorkspaces(): Promise<Result<ManagementV1DevPodWorkspaceInstance[]>> {
-    // communicate with rust layer
-    // rust has a watch operation
-
-    return WorkspaceCommands.ListWorkspaces() as unknown as Result<
-      ManagementV1DevPodWorkspaceInstance[]
-    >
-  }
-
-  public async startWorkspace() {}
 }
 
 // Singleton client

@@ -11,10 +11,10 @@ export function useProInstanceManager(): TProInstanceManager {
   const queryClient = useQueryClient()
   const loginMutation = useMutation<TProvider | undefined, Error, TProInstanceLoginConfig>({
     mutationFn: async ({ host, providerName, accessKey, streamListener }) => {
-      ;(await client.proInstances.login(host, providerName, accessKey, streamListener)).unwrap()
+      ;(await client.pro.login(host, providerName, accessKey, streamListener)).unwrap()
 
       // if we don't have a provider name, check for the pro instance and then use it's provider name
-      const proInstances = (await client.proInstances.listAll()).unwrap()
+      const proInstances = (await client.pro.listAll()).unwrap()
       const maybeNewInstance = proInstances?.find((instance) => instance.host === host)
       const maybeProviderName = maybeNewInstance?.provider
       if (exists(maybeProviderName)) {
@@ -36,7 +36,7 @@ export function useProInstanceManager(): TProInstanceManager {
 
         return maybeProvider
       } catch (e) {
-        ;(await client.proInstances.remove(host)).unwrap()
+        ;(await client.pro.remove(host)).unwrap()
 
         throw e
       }
@@ -47,7 +47,7 @@ export function useProInstanceManager(): TProInstanceManager {
     },
   })
   const disconnectMutation = useMutation<undefined, Err<Failed>, TWithProID>({
-    mutationFn: async ({ id }) => (await client.proInstances.remove(id)).unwrap(),
+    mutationFn: async ({ id }) => (await client.pro.remove(id)).unwrap(),
     onSuccess: () => {
       queryClient.invalidateQueries(QueryKeys.PRO_INSTANCES)
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)

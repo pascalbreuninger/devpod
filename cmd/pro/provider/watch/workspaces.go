@@ -1,4 +1,4 @@
-package provider
+package watch
 
 import (
 	"context"
@@ -18,21 +18,21 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// WatchCmd holds the cmd flags
-type WatchCmd struct {
+// WorkspacesCmd holds the cmd flags
+type WorkspacesCmd struct {
 	*flags.GlobalFlags
 
 	Log log.Logger
 }
 
-// NewWatchCmd creates a new command
-func NewWatchCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &WatchCmd{
+// NewWorkspacesCmd creates a new command
+func NewWorkspacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &WorkspacesCmd{
 		GlobalFlags: globalFlags,
 		Log:         log.GetInstance(),
 	}
 	c := &cobra.Command{
-		Use:    "watch",
+		Use:    "workspaces",
 		Short:  "Watches all workspaces",
 		Hidden: true,
 		Args:   cobra.NoArgs,
@@ -48,7 +48,7 @@ func NewWatchCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 // TODO: Improve handler performance?
 // TODO: What do we want to expose?
 // Do we need to move some of it into rust?
-func (cmd *WatchCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (cmd *WorkspacesCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	baseClient, err := client.InitClientFromPath(ctx, cmd.Config)
 	if err != nil {
 		return err

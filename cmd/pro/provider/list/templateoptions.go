@@ -2,6 +2,7 @@ package list
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -173,4 +174,20 @@ func FindTemplate(ctx context.Context, managementClient kube.Interface, projectN
 
 func VariableToEnvironmentVariable(variable string) string {
 	return "TEMPLATE_OPTION_" + strings.ToUpper(replaceRegEx.ReplaceAllString(variable, "_"))
+}
+
+// Just keeping this around for older commands, might get rid of them
+func printOptions(options *OptionsFormat) error {
+	out, err := json.Marshal(options)
+	if err != nil {
+		return err
+	}
+
+	fmt.Print(string(out))
+	return nil
+}
+
+type OptionsFormat struct {
+	// Options holds the provider options
+	Options map[string]*types.Option `json:"options,omitempty"`
 }
