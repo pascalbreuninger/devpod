@@ -107,7 +107,7 @@ export function WorkspaceInstanceCard({
         variant="outline"
         backgroundColor={isSelected ? "gray.50" : "transparent"}
         marginBottom="3"
-        paddingLeft="8">
+        paddingLeft="2">
         <CardHeader overflow="hidden" w="full">
           <WorkspaceInstanceHeader
             instance={instance}
@@ -269,6 +269,7 @@ export function WorkspaceInstanceCard({
 type TWorkspaceInstanceHeaderProps = Readonly<{
   instance: ManagementV1DevPodWorkspaceInstance
   isLoading: boolean
+  isSelectable?: boolean
   currentAction?: TActionObj | undefined
   isSelected?: boolean
   onActionIndicatorClicked: (actionID: TActionID | undefined) => void
@@ -280,6 +281,7 @@ export function WorkspaceInstanceHeader({
   instance,
   isSelected,
   onSelectionChange,
+  isSelectable = false,
   children,
 }: TWorkspaceInstanceHeaderProps) {
   const checkboxID = useId()
@@ -321,13 +323,15 @@ export function WorkspaceInstanceHeader({
   return (
     <VStack align="start" spacing={0}>
       <HStack w="full">
-        <Checkbox
-          id={checkboxID}
-          paddingRight="2"
-          isChecked={isSelected}
-          isDisabled={onSelectionChange === undefined}
-          onChange={(e) => onSelectionChange?.(e.target.checked)}
-        />
+        {isSelectable && (
+          <Checkbox
+            id={checkboxID}
+            paddingRight="2"
+            isChecked={isSelected}
+            isDisabled={onSelectionChange === undefined}
+            onChange={(e) => onSelectionChange?.(e.target.checked)}
+          />
+        )}
         <Heading size="md" onClick={handleIDClicked}>
           <Text
             as="label"

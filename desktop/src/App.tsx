@@ -24,6 +24,7 @@ import {
   SidebarMenuItem,
   StatusBar,
   Toolbar,
+  ToolbarActions,
 } from "./components"
 import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
 import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
@@ -194,6 +195,9 @@ function ProApp({ errorModal, changelogModal }: TProAppProps) {
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
   const toolbarHeight = useToken("sizes", "10")
   const borderColor = useBorderColor()
+  // TODO: load company info
+  // TODO: load projects
+  // Pass host or provider to CLI
 
   return (
     <>
@@ -214,14 +218,22 @@ function ProApp({ errorModal, changelogModal }: TProAppProps) {
                 width="full">
                 <HStack
                   justifyContent="space-between"
+                  paddingLeft="24" // TODO: Check on other platforms
                   data-tauri-drag-region // keep!
                 >
-                  <HStack>
-                    <Box>Company Info</Box>
-                    <Box>Project Selection</Box>
+                  <HStack gap="4">
+                    <Box>
+                      <Toolbar.Title />
+                    </Box>
+                    <Box>
+                      <Toolbar.Actions />
+                    </Box>
                   </HStack>
                   <HStack>
-                    <Box>S</Box>
+                    <Link as={RouterLink} to={Routes.SETTINGS}>
+                      {/* TODO: Pro settings! */}
+                      <Cog />
+                    </Link>
                     <Notifications />
                   </HStack>
                 </HStack>
