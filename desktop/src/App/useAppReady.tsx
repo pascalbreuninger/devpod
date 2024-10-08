@@ -12,17 +12,18 @@ import {
 import { appWindow } from "@tauri-apps/api/window"
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router"
-import { client } from "./client"
-import { ErrorMessageBox } from "./components"
-import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "./constants"
-import { startWorkspaceAction, useChangeSettings } from "./contexts"
-import { exists } from "./lib"
-import { Routes } from "./routes"
+import { client } from "../client"
+import { ErrorMessageBox } from "../components"
+import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "../constants"
+import { startWorkspaceAction, useChangeSettings, useWorkspaceStore } from "../contexts"
+import { exists } from "../lib"
+import { Routes } from "../routes"
+import { useLoginProModal } from "../views"
 import { useChangelogModal } from "./useChangelogModal"
-import { useLoginProModal } from "./views"
 import { loadLastLocation } from "./usePreserveLocation"
 
 export function useAppReady() {
+  const { store } = useWorkspaceStore()
   const isReadyLockRef = useRef<boolean>(false)
   const viewID = useId()
   const navigate = useNavigate()
@@ -145,6 +146,7 @@ export function useAppReady() {
               name: maybeWorkspace.ide?.name,
             },
           },
+          store,
         })
         navigate(Routes.toAction(actionID))
 
@@ -224,6 +226,7 @@ export function useAppReady() {
               name: defaultIDE ?? maybeWorkspace.ide?.name ?? null,
             },
           },
+          store,
         })
 
         navigate(Routes.toAction(actionID))
@@ -240,7 +243,7 @@ export function useAppReady() {
         })
       )
     },
-    [handleProLogin, navigate, setFailedMessage, setSetting, toast, viewID]
+    [handleProLogin, navigate, setFailedMessage, setSetting, store, toast, viewID]
   )
 
   // notifies underlying layer that ui is ready for communication

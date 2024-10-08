@@ -31,6 +31,8 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	c.AddCommand(list.NewListCmd(globalFlags))
 	c.AddCommand(watch.NewWatchCmd(globalFlags))
+	c.AddCommand(NewSelfCmd(globalFlags))
+
 	c.AddCommand(NewUpCmd(globalFlags))
 	c.AddCommand(NewStopCmd(globalFlags))
 	c.AddCommand(NewSshCmd(globalFlags))

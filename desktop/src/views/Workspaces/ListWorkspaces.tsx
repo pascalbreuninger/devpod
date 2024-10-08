@@ -27,7 +27,7 @@ import {
 } from "@chakra-ui/react"
 import { useId, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
-import { useProviders, useWorkspaces } from "../../contexts"
+import { useProviders, useWorkspaceStore, useWorkspaces } from "../../contexts"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
 import { TProviderID, TWorkspace } from "../../types"
@@ -48,6 +48,7 @@ type TWorkspacesInfo = Readonly<{
 }>
 
 export function ListWorkspaces() {
+  const { store } = useWorkspaceStore()
   const viewID = useId()
   const navigate = useNavigate()
   const [[providers]] = useProviders()
@@ -145,6 +146,7 @@ export function ListWorkspaces() {
       stopWorkspaceAction({
         workspaceID: w.id,
         streamID: viewID,
+        store,
       })
     }
 
@@ -158,6 +160,7 @@ export function ListWorkspaces() {
         workspaceID: w.id,
         streamID: viewID,
         force: forceDelete,
+        store,
       })
     }
   }
