@@ -75,7 +75,7 @@ export function useAppReady() {
 
       if (event.type === "SetupPro") {
         // check if host is already taken. If not, set window to foreground and pass evnet to pro login handler
-        const proInstances = await client.proInstances.listAll()
+        const proInstances = await client.pro.listAll()
         if (proInstances.err) {
           return
         }
@@ -109,7 +109,7 @@ export function useAppReady() {
 
       if (event.type === "ImportWorkspace") {
         await appWindow.setFocus()
-        const importResult = await client.proInstances.importWorkspace({
+        const importResult = await client.pro.importWorkspace({
           workspaceID: event.workspace_id,
           workspaceUID: event.workspace_uid,
           devPodProHost: event.devpod_pro_host,

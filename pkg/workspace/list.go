@@ -98,8 +98,8 @@ func listProWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider
 		var buf bytes.Buffer
 		if err := clientimplementation.RunCommandWithBinaries(
 			context.Background(),
-			"list",
-			providerConfig.Exec.Proxy.List,
+			"listWorkspaces",
+			providerConfig.Exec.Proxy.List.Workspaces,
 			devPodConfig.DefaultContext,
 			nil,
 			nil,

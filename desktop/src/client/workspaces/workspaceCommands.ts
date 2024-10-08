@@ -63,12 +63,6 @@ export class WorkspaceCommands {
     )
   }
 
-  static Watch() {
-    const args = ["watch"]
-
-    return WorkspaceCommands.newCommand(args)
-  }
-
   static async FetchWorkspaceStatus(
     id: string
   ): Promise<Result<Pick<TWorkspace, "id" | "status">>> {
