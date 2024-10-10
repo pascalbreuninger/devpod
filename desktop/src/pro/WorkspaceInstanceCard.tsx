@@ -35,10 +35,10 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useId, useMemo, useState } from "react"
 import { HiOutlineCode, HiShare } from "react-icons/hi"
-import { useNavigate, useNavigation } from "react-router"
+import { useNavigate } from "react-router"
 import { client } from "../client"
 import { IDEIcon } from "../components"
-import { TActionID, TActionObj, useProInstances, useSettings } from "../contexts"
+import { TActionID, TActionObj, useProInstances, useSettings, useWorkspace } from "../contexts"
 import { ArrowCycle, ArrowPath, CommandLine, Ellipsis, Pause, Play, Trash } from "../icons"
 import { getIDEDisplayName, useHover } from "../lib"
 import { QueryKeys } from "../queryKeys"
@@ -48,19 +48,24 @@ import { useIDEs } from "../useIDEs"
 // FIXME: import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
 import { getDisplayName } from "@/lib/pro"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
-import { Annotations, WorkspaceInstanceSource } from "./constants"
+import { Annotations, Labels, WorkspaceInstanceSource } from "./constants"
+import { Label } from "@headlessui/react/dist/components/label/label"
 
 type TWorkspaceInstanceCardProps = Readonly<{
-  instance: ManagementV1DevPodWorkspaceInstance
+  host: string
+  instanceID: string
   isSelected?: boolean
   onSelectionChange?: (isSelected: boolean) => void
 }>
 
 export function WorkspaceInstanceCard({
-  instance,
+  instanceID,
+  host,
   isSelected,
   onSelectionChange,
 }: TWorkspaceInstanceCardProps) {
+  const workspace = useWorkspace<ManagementV1DevPodWorkspaceInstance>(instanceID)
+  const instance = workspace.data
   const settings = useSettings()
   const [forceDelete, setForceDelete] = useState<boolean>(false)
   const navigate = useNavigate()
@@ -96,6 +101,19 @@ export function WorkspaceInstanceCard({
     },
     [navigate]
   )
+  const handleOpenClicked = () => {
+    const workspaceID = instance?.metadata?.labels?.[Labels.WorkspaceID]
+    if (!instanceID || !workspaceID) {
+      return
+    }
+
+    workspace.start({ id: workspaceID, ideConfig: { name: ideName ?? ideName ?? null } })
+    navigate(Routes.toProWorkspace(host, instanceID))
+  }
+
+  if (!instance) {
+    return null
+  }
 
   const isLoading = instance.status?.lastWorkspaceStatus == "loading"
 
@@ -133,6 +151,7 @@ export function WorkspaceInstanceCard({
               onDeleteClicked={handleDeleteClicked}
               onStopClicked={handleStopClicked}
               onLogsClicked={() => {}}
+              onOpenClicked={handleOpenClicked}
             />
           </WorkspaceInstanceHeader>
         </CardHeader>
@@ -374,6 +393,7 @@ type TWorkspaceControlsProps = Readonly<{
   ideName: TIDE["name"]
   setIdeName: (ideName: string | undefined) => void
   navigateToAction: (actionID: TActionID | undefined) => void
+  onOpenClicked: VoidFunction
   onRebuildClicked: VoidFunction
   onResetClicked: VoidFunction
   onDeleteClicked: VoidFunction
@@ -397,6 +417,7 @@ export function WorkspaceControls({
   onStopClicked,
   onLogsClicked,
   onChangeOptionsClicked,
+  onOpenClicked,
 }: TWorkspaceControlsProps) {
   const [[proInstances]] = useProInstances()
   const proInstance = useMemo<TProInstance | undefined>(() => {
@@ -434,16 +455,10 @@ export function WorkspaceControls({
       <ButtonGroup isAttached variant="solid-outline">
         <Tooltip label={isOpenDisabled ? isOpenDisabledReason : undefined}>
           <Button
-            aria-label="Start instance"
+            aria-label="Start workspace"
             leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
             isDisabled={isOpenDisabled}
-            onClick={() => {
-              // const actionID = instance.start({
-              //   id,
-              //   ideConfig: { name: ideName ?? ideName ?? null },
-              // })
-              // navigateToAction(actionID)
-            }}
+            onClick={onOpenClicked}
             isLoading={isLoading}>
             Open
           </Button>

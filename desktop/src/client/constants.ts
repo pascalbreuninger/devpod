@@ -57,5 +57,6 @@ export const DEVPOD_FLAG_WORKSPACE_UID = "--workspace-uid"
 export const DEVPOD_FLAG_WORKSPACE_PROJECT = "--workspace-project"
 export const DEVPOD_FLAG_LOGIN = "--login"
 export const DEVPOD_FLAG_HOST = "--host"
+export const DEVPOD_FLAG_SKIP_PRO = "--skip-pro"
 
 export const DEVPOD_UI_ENV_VAR = "DEVPOD_UI"

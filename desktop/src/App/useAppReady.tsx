@@ -20,7 +20,6 @@ import { exists } from "../lib"
 import { Routes } from "../routes"
 import { useLoginProModal } from "../views"
 import { useChangelogModal } from "./useChangelogModal"
-import { loadLastLocation } from "./usePreserveLocation"
 
 export function useAppReady() {
   const { store } = useWorkspaceStore()
@@ -252,12 +251,6 @@ export function useAppReady() {
     if (!isReadyLockRef.current) {
       isReadyLockRef.current = true
 
-      loadLastLocation().then((location) => {
-        if (!location) {
-          return
-        }
-        navigate(location)
-      })
       unsubscribePromise.then(async () => {
         try {
           await client.ready()
