@@ -105,8 +105,10 @@ export class WorkspacesClient implements TDebuggable {
       WorkspaceCommands.ADDITIONAL_FLAGS + " --git-ssh-signing-key=" + sshKeyPath
   }
 
-  public async listAll(): Promise<Result<readonly TWorkspaceWithoutStatus[]>> {
-    return WorkspaceCommands.ListWorkspaces()
+  public async listAll(
+    skipPro: boolean = true
+  ): Promise<Result<readonly TWorkspaceWithoutStatus[]>> {
+    return WorkspaceCommands.ListWorkspaces(skipPro)
   }
 
   public async getStatus(id: TWorkspaceID): Promise<Result<TWorkspace["status"]>> {

@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react"
 import { Link as RouterLink, useMatch, useRouteError } from "react-router-dom"
 import {
   DevPodProvider,
+  ProInstancesProvider,
   WorkspaceStore,
   WorkspaceStoreProvider,
   useChangeSettings,
@@ -26,7 +27,9 @@ export function App() {
   return routeMatchPro == null ? (
     <WorkspaceStoreProvider store={store!}>
       <DevPodProvider>
-        <OSSApp />
+        <ProInstancesProvider>
+          <OSSApp />
+        </ProInstancesProvider>
       </DevPodProvider>
     </WorkspaceStoreProvider>
   ) : (

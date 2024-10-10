@@ -1,7 +1,8 @@
 import { client } from "@/client"
-import { useProInstances, useSettings, useWorkspaces } from "@/contexts"
+import { useProInstances, useSettings } from "@/contexts"
 import { Briefcase, CheckCircle, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
 import { exists } from "@/lib"
+import { Routes } from "@/routes"
 import { TProID, TProInstance, TProInstances } from "@/types"
 import { useLoginProModal, useReLoginProModal } from "@/views/ProInstances/useLoginProModal"
 import { useDeleteProviderModal } from "@/views/Providers/useDeleteProviderModal"
@@ -28,11 +29,10 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { Dispatch, ReactElement, SetStateAction, useEffect, useMemo, useState } from "react"
+import { Dispatch, ReactElement, SetStateAction, useEffect, useState } from "react"
 import { HiArrowRightOnRectangle, HiClock } from "react-icons/hi2"
-import { IconTag } from "../Tag"
 import { Link as ReactRouterLink } from "react-router-dom"
-import { Routes } from "@/routes"
+import { IconTag } from "../Tag"
 
 export function ProSwitcher() {
   const [[proInstances]] = useProInstances()
@@ -225,27 +225,15 @@ function ProInstanceRow({
   host,
   creationTimestamp,
   onIsDeletingChanged,
-  provider,
   authenticated,
   onLoginClicked,
 }: TProInstaceRowProps) {
   const [, { disconnect }] = useProInstances()
-  const workspaces = useWorkspaces()
-  const proInstanceWorkspaces = useMemo(
-    () => workspaces.filter((workspace) => workspace.provider?.name === provider),
-    [provider, workspaces]
-  )
   const {
     modal: deleteProviderModal,
     open: openDeleteProviderModal,
     isOpen,
-  } = useDeleteProviderModal(
-    host,
-    "Pro instance",
-    "disconnect",
-    proInstanceWorkspaces.length > 0,
-    () => disconnect.run({ id: host })
-  )
+  } = useDeleteProviderModal(host, "Pro instance", "disconnect", () => disconnect.run({ id: host }))
   useEffect(() => {
     onIsDeletingChanged(isOpen)
     // `onIsDeletingChanged` is expected to be a stable reference
@@ -280,8 +268,9 @@ function ProInstanceRow({
               variant="ghost"
               icon={<Briefcase />}
               paddingInlineStart="0"
-              label={proInstanceWorkspaces.length.toString(10)}
-              info={`${proInstanceWorkspaces.length} workspaces`}
+              label="TODO"
+              // label={proInstanceWorkspaces.length.toString(10)}
+              // info={`${proInstanceWorkspaces.length} workspaces`}
             />
             {exists(creationTimestamp) && (
               <IconTag

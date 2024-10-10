@@ -1,6 +1,14 @@
 import {
+  Badge,
+  Box,
+  Button,
   Center,
+  Divider,
+  HStack,
+  Heading,
   IconButton,
+  Image,
+  Link,
   LinkBox,
   LinkOverlay,
   Popover,
@@ -12,30 +20,24 @@ import {
   Portal,
   Spinner,
   Text,
-  Image,
-  useColorModeValue,
   VStack,
-  Box,
-  Badge,
-  HStack,
-  Heading,
-  Button,
-  Link,
-  Divider,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { useMemo } from "react"
+import { ReactNode, useMemo } from "react"
 import { Link as RouterLink, useLocation } from "react-router-dom"
-import { useSettings, useAllWorkspaceActions, useProviders } from "../../contexts"
-import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle, Stack3D } from "../../icons"
+import { client } from "../../client"
+import { useAllWorkspaceActions, useSettings } from "../../contexts"
+import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
 import { getActionDisplayName, useUpdate } from "../../lib"
 import { Routes } from "../../routes"
 import { Ripple } from "../Animation"
-import { client } from "../../client"
-import { QueryKeys } from "../../queryKeys"
-import { useQuery } from "@tanstack/react-query"
 
-export function Notifications() {
+type TNotificationsProps = Readonly<{
+  badgeNumber?: number
+  providerUpdates?: ReactNode
+}>
+export function Notifications({ badgeNumber = 0, providerUpdates }: TNotificationsProps) {
   const location = useLocation()
   const actions = useAllWorkspaceActions()
   const backgroundColor = useColorModeValue("white", "gray.900")
@@ -44,8 +46,6 @@ export function Notifications() {
   const hasActiveActions = actions.active.length > 0
   const settings = useSettings()
   const { pendingUpdate, install: installUpdate, isInstalling, isInstallDisabled } = useUpdate()
-  const providerUpdateInfo = useProviderUpdates()
-  const providerUpdateCount = providerUpdateInfo?.length ?? 0
 
   const combinedActions = useMemo(() => {
     return [...actions.active, ...actions.history]
@@ -63,7 +63,7 @@ export function Notifications() {
             icon={
               <>
                 <Bell boxSize={6} position="absolute" />
-                {(pendingUpdate || providerUpdateCount !== 0) && (
+                {(pendingUpdate || badgeNumber !== 0) && (
                   <Badge
                     colorScheme="red"
                     position="absolute"
@@ -72,7 +72,7 @@ export function Notifications() {
                     borderRadius="full"
                     right="0"
                     top="0">
-                    {pendingUpdate ? 1 + providerUpdateCount : providerUpdateCount}
+                    {pendingUpdate ? 1 + badgeNumber : badgeNumber}
                   </Badge>
                 )}
                 {hasActiveActions && <Ripple boxSize={10} />}
@@ -115,42 +115,17 @@ export function Notifications() {
                 </HStack>
               )}
               <Box width="full" overflowY="auto" maxHeight="17rem" height="full" padding="1">
-                {combinedActions.length === 0 && providerUpdateCount === 0 && (
+                {combinedActions.length === 0 && badgeNumber === 0 && (
                   <Text padding={2}>No notifications</Text>
                 )}
-                {providerUpdateInfo && providerUpdateCount > 0 && (
+
+                {providerUpdates && (
                   <>
-                    {providerUpdateInfo.map(({ providerName }) => (
-                      <LinkBox
-                        key={providerName}
-                        padding={2}
-                        fontSize="sm"
-                        borderRadius="md"
-                        width="full"
-                        display="flex"
-                        flexFlow="row nowrap"
-                        alignItems="center"
-                        gap={3}
-                        _hover={{ backgroundColor: actionHoverColor }}>
-                        <Stack3D color="gray.400" />
-                        <VStack align="start" spacing="0">
-                          <Text>
-                            <LinkOverlay
-                              as={RouterLink}
-                              to={Routes.PROVIDERS}
-                              textTransform="capitalize">
-                              <Text fontWeight="bold">Provider {providerName}</Text>
-                            </LinkOverlay>
-                          </Text>
-                          <Text color={subheadingTextColor} marginTop="-1">
-                            Update available
-                          </Text>
-                        </VStack>
-                      </LinkBox>
-                    ))}
+                    {providerUpdates}
                     <Divider />
                   </>
                 )}
+
                 {combinedActions.map((action) => (
                   <LinkBox
                     key={action.id}
@@ -203,42 +178,4 @@ export function Notifications() {
       </Portal>
     </Popover>
   )
-}
-
-function useProviderUpdates() {
-  const [[providers]] = useProviders()
-  const { data: providerUpdateInfo } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: QueryKeys.PROVIDERS_CHECK_UPDATE_ALL,
-    queryFn: async () => {
-      if (providers === undefined || Object.keys(providers).length === 0) {
-        return
-      }
-
-      const results = await Promise.allSettled(
-        Object.keys(providers).map(async (p) => ({
-          name: p,
-          update: await client.providers.checkUpdate(p),
-        }))
-      )
-
-      return results
-        .map((r) => {
-          if (r.status !== "fulfilled" || r.value.update.err) {
-            return null
-          }
-
-          if (!r.value.update.val.updateAvailable) {
-            return null
-          }
-
-          return { providerName: r.value.name, updateAvailable: r.value.update.val.updateAvailable }
-        })
-        .filter((r): r is Exclude<typeof r, null> => r !== null)
-    },
-    refetchInterval: 1000 * 60 * 60 * 30, // 30 minutes
-    staleTime: Infinity,
-  })
-
-  return providerUpdateInfo
 }

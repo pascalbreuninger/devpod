@@ -141,7 +141,7 @@ func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.Ba
 	}
 
 	// try to find other workspace with same machine
-	workspaces, err := workspace2.List(devPodConfig, log.Default)
+	workspaces, err := workspace2.List(devPodConfig, false, log.Default)
 	if err != nil {
 		return false, errors.Wrap(err, "list workspaces")
 	}

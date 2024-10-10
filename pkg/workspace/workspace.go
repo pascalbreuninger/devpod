@@ -191,7 +191,6 @@ func resolveWorkspace(
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
-			// TODO: Replace
 			workspace := findWorkspace(devPodConfig, nil, desiredID, log)
 			if workspace == nil {
 				return nil, nil, nil, fmt.Errorf("workspace %s doesn't exist", desiredID)
@@ -460,7 +459,7 @@ func findWorkspace(devPodConfig *config.Config, args []string, workspaceID strin
 		workspaceID = ToID(name)
 	}
 
-	allWorkspaces, err := List(devPodConfig, log)
+	allWorkspaces, err := List(devPodConfig, false, log)
 	if err != nil {
 		log.Debugf("failed to list workspaces: %v", err)
 		return nil
@@ -492,7 +491,7 @@ func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, sshConfig
 		return nil, nil, nil, errProvideWorkspaceArg
 	}
 
-	workspaces, err := List(devPodConfig, log)
+	workspaces, err := List(devPodConfig, false, log)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("list workspaces: %w", err)
 	}
