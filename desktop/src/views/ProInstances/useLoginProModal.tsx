@@ -1,5 +1,5 @@
 import { BottomActionBar, BottomActionBarError, Form, useStreamingTerminal } from "@/components"
-import { useProInstanceManager, useProInstances, useProviders } from "@/contexts"
+import { useProInstanceManager, useProInstances } from "@/contexts"
 import { exists, useFormErrors } from "@/lib"
 import { Routes } from "@/routes"
 import {
@@ -31,16 +31,13 @@ import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { ConfigureProviderOptionsForm } from "../Providers/AddProvider"
 import { useSetupProvider } from "../Providers/AddProvider/useSetupProvider"
-import { ALLOWED_NAMES_REGEX } from "../Providers/AddProvider/helpers"
 
 type TFormValues = {
   [FieldName.PRO_HOST]: string
-  [FieldName.PROVIDER_NAME]: string | undefined
   [FieldName.ACCESS_KEY]: string | undefined
 }
 const FieldName = {
   PRO_HOST: "proURL",
-  PROVIDER_NAME: "providerName",
   ACCESS_KEY: "accessKey",
 } as const
 
@@ -56,7 +53,6 @@ export function useLoginProModal() {
   >({})
   const { terminal, connectStream, clear: clearTerminal } = useStreamingTerminal({ fontSize: "sm" })
   const [[proInstances], { login, disconnect }] = useProInstances()
-  const [[providers]] = useProviders()
   const { isOpen, onClose, onOpen } = useDisclosure()
   const { handleSubmit, formState, register, reset, setValue } = useForm<TFormValues>({
     mode: "onBlur",
@@ -67,7 +63,6 @@ export function useLoginProModal() {
       clearTerminal()
       login.run({
         host: data[FieldName.PRO_HOST],
-        providerName: data[FieldName.PROVIDER_NAME],
         accessKey: data[FieldName.ACCESS_KEY],
         streamListener: connectStream,
       })
@@ -100,7 +95,7 @@ export function useLoginProModal() {
     removeDanglingProviders,
   } = useSetupProvider()
 
-  const { proURLError, providerNameError } = useFormErrors(Object.values(FieldName), formState)
+  const { proURLError } = useFormErrors(Object.values(FieldName), formState)
 
   useEffect(() => {
     if (login.status === "success") {
@@ -167,15 +162,8 @@ export function useLoginProModal() {
           <ModalBody overflowX="hidden" overflowY="auto" paddingBottom="0" ref={containerRef}>
             <VStack align="start" spacing="8" paddingX="4" paddingTop="4">
               <Form onSubmit={handleSubmit(onSubmit)} justifyContent="center">
-                <Container
-                  minHeight="40"
-                  maxWidth="container.md"
-                  display="flex"
-                  flexDirection="row"
-                  flexWrap="nowrap"
-                  gap="4">
+                <Container minHeight="40" maxWidth="container.md">
                   <FormControl
-                    flexBasis={"70%"}
                     isRequired
                     isInvalid={exists(proURLError)}
                     isDisabled={areInputsDisabled}>
@@ -218,44 +206,6 @@ export function useLoginProModal() {
                         you&apos;re unsure about it, ask your company administrator or create a new
                         Pro instance on your local machine.
                       </FormHelperText>
-                    )}
-                  </FormControl>
-                  <FormControl
-                    flexBasis="33%"
-                    isInvalid={exists(providerNameError)}
-                    isDisabled={areInputsDisabled}>
-                    <FormLabel>Provider Name</FormLabel>
-                    <InputGroup>
-                      <Input
-                        type="text"
-                        placeholder="devpod-pro"
-                        {...register(FieldName.PROVIDER_NAME, {
-                          required: false,
-                          pattern: {
-                            value: ALLOWED_NAMES_REGEX,
-                            message: "Name can only contain lowercase letters, numbers and -",
-                          },
-                          validate: {
-                            unique: (value) => {
-                              if (value === undefined) return true
-                              const isNameTaken = providers?.[value] !== undefined
-
-                              return isNameTaken
-                                ? `Name must be unique, a provider named ${value} already exists`
-                                : true
-                            },
-                          },
-                          maxLength: {
-                            value: 48,
-                            message: "Name cannot be longer than 48 characters",
-                          },
-                        })}
-                      />
-                    </InputGroup>
-                    {providerNameError && providerNameError.message ? (
-                      <FormErrorMessage>{providerNameError.message}</FormErrorMessage>
-                    ) : (
-                      <FormHelperText>Optionally give the pro provider a name</FormHelperText>
                     )}
                   </FormControl>
                 </Container>
@@ -318,14 +268,12 @@ export function useLoginProModal() {
     proURLError,
     areInputsDisabled,
     register,
-    providerNameError,
     state,
     terminal,
     formState.isValid,
     formState.isSubmitting,
     completeFlow,
     proInstances,
-    providers,
   ])
 
   return { modal, handleOpenLogin }

@@ -18,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func List(devPodConfig *config.Config, log log.Logger) ([]*providerpkg.Workspace, error) {
+func List(devPodConfig *config.Config, skipPro bool, log log.Logger) ([]*providerpkg.Workspace, error) {
 	// Set indexed by UID for deduplication
 	workspaces := map[string]*providerpkg.Workspace{}
 
@@ -28,13 +28,16 @@ func List(devPodConfig *config.Config, log log.Logger) ([]*providerpkg.Workspace
 		return nil, err
 	}
 
-	// list remote workspaces
-	proWorkspaces, err := listProWorkspaces(devPodConfig, log)
-	if err != nil {
-		return nil, err
-	}
+	proWorkspaces := []*providerpkg.Workspace{}
+	if !skipPro {
+		// list remote workspaces
+		proWorkspaces, err = listProWorkspaces(devPodConfig, log)
+		if err != nil {
+			return nil, err
+		}
 
-	// merge remote into local, taking precendence if UID matches
+	}
+	// merge remote into local, taking precedence if UID matches
 	for _, workspace := range append(localWorkspaces, proWorkspaces...) {
 		workspaces[workspace.UID] = workspace
 	}
@@ -67,6 +70,10 @@ func listLocalWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provid
 		workspaceConfig, err := providerpkg.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
 		if err != nil {
 			log.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
+			continue
+		}
+
+		if workspaceConfig.Pro {
 			continue
 		}
 

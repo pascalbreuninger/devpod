@@ -19,8 +19,8 @@ import (
 type ListCmd struct {
 	*flags.GlobalFlags
 
-	Output string
-	Host   string
+	Output  string
+	SkipPro bool
 }
 
 // NewListCmd creates a new destroy command
@@ -43,6 +43,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	listCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
+	listCmd.Flags().BoolVar(&cmd.SkipPro, "skip-pro", false, "Don't list pro workspaces")
 	return listCmd
 }
 
@@ -53,7 +54,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	workspaces, err := workspace.List(devPodConfig, log.Default)
+	workspaces, err := workspace.List(devPodConfig, cmd.SkipPro, log.Default)
 	if err != nil {
 		return err
 	}

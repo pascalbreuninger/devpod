@@ -8,7 +8,7 @@ options:
     hidden: true
     required: true
     default: "${PROVIDER_FOLDER}/loft-config.json"
-    subOptionsCommand: "${PRO_PROVIDER} pro provider list projects"
+    subOptionsCommand: "${PRO_PROVIDER} pro provider list projects" # TODO: remove?
 binaries:
   PRO_PROVIDER:
     - os: linux

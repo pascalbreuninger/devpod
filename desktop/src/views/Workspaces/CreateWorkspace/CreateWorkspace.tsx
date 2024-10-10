@@ -450,7 +450,7 @@ type TProviderInputProps = Readonly<{
 function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputProps) {
   const gridChildWidth = useToken("sizes", "12")
   const [provider] = useProvider(field.value)
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const reuseWorkspace = useMemo(() => {
     return workspaces.find((workspace) => {
       return (

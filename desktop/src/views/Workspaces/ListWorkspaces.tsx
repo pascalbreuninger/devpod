@@ -52,7 +52,7 @@ export function ListWorkspaces() {
   const viewID = useId()
   const navigate = useNavigate()
   const [[providers]] = useProviders()
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const [selectedWorkspaces, setSelectedWorkspaces] = useState(new Set<string>())
   const [forceDelete, setForceDelete] = useState(false)
   const {

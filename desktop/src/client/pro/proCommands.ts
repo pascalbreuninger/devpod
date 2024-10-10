@@ -13,7 +13,6 @@ import {
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_LOGIN,
-  DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_USE,
   DEVPOD_FLAG_WORKSPACE_ID,
   DEVPOD_FLAG_WORKSPACE_PROJECT,
@@ -30,13 +29,9 @@ export class ProCommands {
 
   static async Login(
     host: string,
-    providerName?: string,
     accessKey?: string,
     listener?: TStreamEventListenerFn
   ): Promise<ResultError> {
-    const maybeProviderNameFlag = providerName
-      ? [toFlagArg(DEVPOD_FLAG_PROVIDER, providerName)]
-      : []
     const maybeAccessKeyFlag = accessKey ? [toFlagArg(DEVPOD_FLAG_ACCESS_KEY, accessKey)] : []
     const useFlag = toFlagArg(DEVPOD_FLAG_USE, "false")
 
@@ -46,7 +41,6 @@ export class ProCommands {
       host,
       useFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
-      ...maybeProviderNameFlag,
       ...maybeAccessKeyFlag,
     ])
     if (listener) {

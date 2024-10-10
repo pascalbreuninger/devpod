@@ -1,37 +1,34 @@
-import { Err, Failed, exists } from "@/lib"
+import { Err, Failed } from "@/lib"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { client } from "../../client"
-import { QueryKeys } from "../../queryKeys"
-import { TProInstanceLoginConfig, TProInstanceManager, TProvider, TWithProID } from "../../types"
+import { client } from "../../../client"
+import { QueryKeys } from "../../../queryKeys"
+import { TProInstanceLoginConfig, TProInstanceManager, TProvider, TWithProID } from "../../../types"
 
 const FALLBACK_PROVIDER_NAME = "devpod-pro"
 
 export function useProInstanceManager(): TProInstanceManager {
   const queryClient = useQueryClient()
   const loginMutation = useMutation<TProvider | undefined, Error, TProInstanceLoginConfig>({
-    mutationFn: async ({ host, providerName, accessKey, streamListener }) => {
-      ;(await client.pro.login(host, providerName, accessKey, streamListener)).unwrap()
+    mutationFn: async ({ host, accessKey, streamListener }) => {
+      ;(await client.pro.login(host, accessKey, streamListener)).unwrap()
 
       // if we don't have a provider name, check for the pro instance and then use it's provider name
       const proInstances = (await client.pro.listAll()).unwrap()
       const maybeNewInstance = proInstances?.find((instance) => instance.host === host)
-      const maybeProviderName = maybeNewInstance?.provider
-      if (exists(maybeProviderName)) {
-        providerName = maybeProviderName
-      }
+      let maybeProviderName = maybeNewInstance?.provider
 
       try {
         const providers = (await client.providers.listAll()).unwrap()
         if (providers === undefined || Object.keys(providers).length === 0) {
           throw new Error("No providers found")
         }
-        if (providerName === undefined || providerName === "") {
-          providerName = FALLBACK_PROVIDER_NAME
+        if (!maybeProviderName) {
+          maybeProviderName = FALLBACK_PROVIDER_NAME
         }
-        const maybeProvider = providers[providerName]
+        const maybeProvider = providers[maybeProviderName]
         if (!maybeProvider) {
-          throw new Error(`Provider ${providerName} not found`)
+          throw new Error(`Provider ${maybeProviderName} not found`)
         }
 
         return maybeProvider

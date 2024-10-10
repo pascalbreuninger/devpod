@@ -18,9 +18,9 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { getProjectNamespace } from "@loft-enterprise/client"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
+import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { useQuery } from "@tanstack/react-query"
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
 import {
@@ -29,17 +29,20 @@ import {
   Path,
   Link as RouterLink,
   createBrowserRouter,
+  useNavigate,
   useParams,
 } from "react-router-dom"
 import { App, ErrorPage } from "./App"
-import { client } from "./client"
+import { useAppReady } from "./App/useAppReady"
+import { client as globalClient } from "./client"
 import { ToolbarActions, ToolbarTitle, WarningMessageBox } from "./components"
 import {
   ProWorkspaceStore,
   TActionID,
-  WorkspaceStoreProvider,
   useSettings,
+  useWorkspace,
   useWorkspaceStore,
+  useWorkspaces,
 } from "./contexts"
 import { exists } from "./lib"
 import { getDisplayName } from "./lib/pro"
@@ -213,12 +216,13 @@ function Pro() {
 }
 
 type TProContext = Readonly<{
-  workspaces: readonly ManagementV1DevPodWorkspaceInstance[]
+  managementSelf: ManagementV1Self
+  currentProject: ManagementV1Project
+  host: string
 }>
-const ProContext = createContext<TProContext>({
-  workspaces: [],
-})
-function ProProvider({ host, children }: { host: string; children: ReactNode }) {
+const ProContext = createContext<TProContext>(null!)
+export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
+  const navigate = useNavigate()
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
   const client = useProClient(host)
   const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
@@ -244,24 +248,6 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
     return projects?.[0]
   }, [projects, selectedProject])
 
-  const workspaces = useMemo(() => {
-    if (!currentProject) {
-      return []
-    }
-
-    return store
-      .getAll()
-      .filter(
-        (w) =>
-          w.metadata?.namespace ==
-          getProjectNamespace(
-            currentProject.metadata?.name,
-            managementSelf?.status?.projectNamespacePrefix
-          )
-      )
-  }, [currentProject, managementSelf?.status?.projectNamespacePrefix, store])
-
-  // TODO: Can we merge OSS and pro workspace types here?
   useEffect(() => {
     return client.watchWorkspaces((workspaces) => {
       // sort by last activity (newest > oldest)
@@ -282,15 +268,28 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
     setSelectedProject(newProject)
   }
 
-  const value = useMemo<TProContext>(() => ({ workspaces }), [workspaces])
+  const value = useMemo<TProContext>(() => {
+    if (!managementSelf || !currentProject) {
+      return null!
+    }
+
+    return { managementSelf, currentProject, host }
+  }, [currentProject, managementSelf, host])
+
+  // TODO: handle properly with loading indicator
+  if (!managementSelf || !currentProject) {
+    return null
+  }
 
   return (
     <ProContext.Provider value={value}>
       <ToolbarTitle>
-        <Text fontWeight="semibold">{host}</Text>
+        <Text onClick={() => navigate(Routes.toProInstance(host))} fontWeight="semibold">
+          {host}
+        </Text>
       </ToolbarTitle>
       <ToolbarActions>
-        {projects && projects.length > 0 && currentProject != undefined && (
+        {projects && projects.length > 0 && (
           <ProjectPicker
             projects={projects}
             currentProject={currentProject}
@@ -303,14 +302,19 @@ function ProProvider({ host, children }: { host: string; children: ReactNode }) 
   )
 }
 
+export function useProHost() {
+  const { host: urlHost } = useParams<{ host: string | undefined }>()
+
+  const host = useMemo(() => {
+    return urlHost?.replaceAll("-", ".")
+  }, [urlHost])
+
+  return host
+}
+
 function ProInstance() {
-  const { host } = useParams<{ host: string | undefined }>()
-
-  const store = useMemo(() => {
-    const realHost = host?.replaceAll("-", ".")
-
-    return new ProWorkspaceStore()
-  }, [host])
+  const host = useProHost()
+  const { errorModal, changelogModal, proLoginModal } = useAppReady()
 
   if (host == undefined || host.length === 0) {
     return (
@@ -329,16 +333,19 @@ function ProInstance() {
   }
 
   return (
-    <WorkspaceStoreProvider store={store}>
-      <ProProvider host={host.replaceAll("-", ".")}>
-        <Outlet />
-      </ProProvider>
-    </WorkspaceStoreProvider>
+    <>
+      <Outlet />
+
+      {errorModal}
+      {changelogModal}
+      {proLoginModal}
+    </>
   )
 }
 
 function ListProWorkspaces() {
   const workspaces = useProWorkspaces()
+  const { host } = useContext(ProContext)
 
   return (
     <div>
@@ -349,7 +356,7 @@ function ListProWorkspaces() {
       <List>
         {workspaces.map((w) => (
           <ListItem key={w.metadata!.name}>
-            <WorkspaceInstanceCard instance={w} />
+            <WorkspaceInstanceCard host={host} instanceID={w.metadata!.name!} />
           </ListItem>
         ))}
       </List>
@@ -359,14 +366,17 @@ function ListProWorkspaces() {
 
 function useProClient(id: TProID) {
   const c = useMemo(() => {
-    return client.getProClient(id)
+    return globalClient.getProClient(id)
   }, [id])
 
   return c
 }
 
 function useProWorkspaces() {
-  return useContext(ProContext).workspaces
+  const workspaces = useWorkspaces<ManagementV1DevPodWorkspaceInstance>()
+  console.log(workspaces)
+
+  return workspaces
 }
 
 const DETAILS_TABS = [
@@ -378,9 +388,19 @@ const DETAILS_TABS = [
 function ProWorkspace() {
   const params = useParams()
   const settings = useSettings()
-  const workspaces = useProWorkspaces()
-  const instance = workspaces.find((w) => w.metadata?.name === params.workspace)
-  const { ides, defaultIDE } = useIDEs()
+  const workspace = useWorkspace<ManagementV1DevPodWorkspaceInstance>(params.workspace)
+  const instance = workspace.data
+  const { ides } = useIDEs()
+
+  useEffect(() => {
+    workspace.current?.connect((e) => {
+      if (e.type === "error") {
+        console.log(e.error.message)
+      } else {
+        console.log(e.data.message)
+      }
+    })
+  }, [workspace])
 
   if (!instance) {
     return <>Instance not found</>
@@ -417,6 +437,7 @@ function ProWorkspace() {
               onDeleteClicked={() => {}}
               onStopClicked={() => {}}
               onLogsClicked={() => {}}
+              onOpenClicked={() => {}}
             />
           </WorkspaceInstanceHeader>
         </Box>

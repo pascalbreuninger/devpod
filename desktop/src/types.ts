@@ -240,7 +240,6 @@ export type TProInstanceManager = Readonly<{
 }>
 export type TProInstanceLoginConfig = Readonly<{
   host: string
-  providerName?: string
   accessKey?: string
   streamListener?: TStreamEventListenerFn
 }>

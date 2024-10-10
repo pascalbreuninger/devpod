@@ -15,11 +15,10 @@ export class ProClient implements TDebuggable {
 
   public async login(
     host: string,
-    providerName?: string,
     accessKey?: string,
     listener?: TStreamEventListenerFn
   ): Promise<ResultError> {
-    return ProCommands.Login(host, providerName, accessKey, listener)
+    return ProCommands.Login(host, accessKey, listener)
   }
 
   public async listAll(config?: TListProInstancesConfig): Promise<Result<readonly TProInstance[]>> {

@@ -28,6 +28,7 @@ import {
   DEVPOD_FLAG_PROVIDER_OPTION,
   DEVPOD_FLAG_RECREATE,
   DEVPOD_FLAG_RESET,
+  DEVPOD_FLAG_SKIP_PRO,
   DEVPOD_FLAG_SOURCE,
   DEVPOD_FLAG_TIMEOUT,
 } from "../constants"
@@ -48,8 +49,14 @@ export class WorkspaceCommands {
     return new Command([...args, ...extraFlags])
   }
 
-  static async ListWorkspaces(): Promise<Result<TWorkspaceWithoutStatus[]>> {
-    const result = await new Command([DEVPOD_COMMAND_LIST, DEVPOD_FLAG_JSON_OUTPUT]).run()
+  static async ListWorkspaces(skipPro: boolean): Promise<Result<TWorkspaceWithoutStatus[]>> {
+    const maybeSkipProFlag = exists(skipPro) ? [DEVPOD_FLAG_SKIP_PRO] : []
+
+    const result = await new Command([
+      DEVPOD_COMMAND_LIST,
+      DEVPOD_FLAG_JSON_OUTPUT,
+      ...maybeSkipProFlag,
+    ]).run()
     if (result.err) {
       return result
     }
@@ -57,8 +64,8 @@ export class WorkspaceCommands {
     const rawWorkspaces = JSON.parse(result.val.stdout) as TRawWorkspaces
 
     return Return.Value(
-      rawWorkspaces.filter(
-        (workspace): workspace is TWorkspaceWithoutStatus => exists(workspace.id) // TODO: Filter pro workspaces
+      rawWorkspaces.filter((workspace): workspace is TWorkspaceWithoutStatus =>
+        exists(workspace.id)
       )
     )
   }

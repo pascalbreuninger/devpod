@@ -4,7 +4,7 @@ import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
-import { RouterProvider } from "react-router"
+import { Location, RouterProvider } from "react-router"
 import "xterm/css/xterm.css"
 import { ThemeProvider } from "./Theme"
 import { SettingsProvider } from "./contexts"
@@ -33,7 +33,20 @@ const queryClient = new QueryClient({
   },
 })
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)
+// TODO: Clean up :)
+let render = true
+const l = localStorage.getItem("devpod-location-current")
+if (l) {
+  const loc = JSON.parse(l) as Location
+  if (window.location.pathname !== loc.pathname) {
+    window.location.pathname = loc.pathname
+    render = false
+  }
+}
+
+if (render) {
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)
+}
 
 function Root() {
   return (

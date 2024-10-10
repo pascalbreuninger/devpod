@@ -1,5 +1,11 @@
 import { debug, EventManager, SingleEventManager } from "../../../lib"
-import { TUnsubscribeFn, TWorkspace, TWorkspaceID, TWorkspaceWithoutStatus } from "../../../types"
+import {
+  TProID,
+  TUnsubscribeFn,
+  TWorkspace,
+  TWorkspaceID,
+  TWorkspaceWithoutStatus,
+} from "../../../types"
 import { replaceEqualDeep } from "../helpers"
 import { Action, TActionFn, TActionName, TActionObj } from "../action"
 import { ActionHistory } from "../action/actionHistory" // This is a workaround for how typescript resolves circular dependencies, usually the import should be from "./action"
@@ -26,16 +32,15 @@ export interface IWorkspaceStore<TID extends string, TW> {
   ): Action["id"]
 }
 
-// TODO: Continue here tomorrow, namespace ActionHistory
-
-class InternalWorkspaceStore<TID extends string, TW> {
+class InternalWorkspaceStore<TID extends string, TWorkspace> {
   private readonly eventManager = new SingleEventManager<void>()
-  private actionsHistory = new ActionHistory()
-  private workspaces = new Map<TID, TW>()
-  private lastWorkspaces: readonly TW[] = []
+  private actionsHistory: ActionHistory
+  private workspaces = new Map<TID, TWorkspace>()
+  private lastWorkspaces: readonly TWorkspace[] = []
   private lastActions: TLastActions = { active: [], history: [] }
 
-  constructor() {
+  constructor(key?: string) {
+    this.actionsHistory = new ActionHistory(key)
     this.lastActions = this.actionsHistory.getAll()
   }
 
@@ -45,11 +50,11 @@ class InternalWorkspaceStore<TID extends string, TW> {
     return this.eventManager.subscribe(handler)
   }
 
-  public get(id: TID): TW | undefined {
+  public get(id: TID): TWorkspace | undefined {
     return this.workspaces.get(id)
   }
 
-  public getAll(): readonly TW[] {
+  public getAll(): readonly TWorkspace[] {
     return this.lastWorkspaces
   }
 
@@ -112,12 +117,12 @@ class InternalWorkspaceStore<TID extends string, TW> {
     return action.id
   }
 
-  public setWorkspaces(newWorkspaces: Map<TID, TW>) {
+  public setWorkspaces(newWorkspaces: Map<TID, TWorkspace>) {
     this.workspaces = newWorkspaces
     this.workspacesDidChange()
   }
 
-  public setWorkspace(id: TID, newWorkspace: TW) {
+  public setWorkspace(id: TID, newWorkspace: TWorkspace) {
     this.workspaces.set(id, newWorkspace)
     this.workspacesDidChange()
   }
@@ -223,7 +228,10 @@ export class WorkspaceStore implements IWorkspaceStore<TWorkspaceID, TWorkspace>
 export class ProWorkspaceStore
   implements IWorkspaceStore<TWorkspaceID, ManagementV1DevPodWorkspaceInstance>
 {
-  private store = new InternalWorkspaceStore<TWorkspaceID, ManagementV1DevPodWorkspaceInstance>()
+  private store: InternalWorkspaceStore<TWorkspaceID, ManagementV1DevPodWorkspaceInstance>
+  constructor(id: TProID) {
+    this.store = new InternalWorkspaceStore<TWorkspaceID, ManagementV1DevPodWorkspaceInstance>(id)
+  }
 
   public get(id: TWorkspaceID): ManagementV1DevPodWorkspaceInstance | undefined {
     return this.store.get(id)
