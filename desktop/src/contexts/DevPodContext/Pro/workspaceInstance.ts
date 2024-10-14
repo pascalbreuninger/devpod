@@ -1,6 +1,6 @@
 import { TIdentifiable } from "@/types"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
-import { Labels } from "./constants"
+import { Labels } from "@/lib"
 
 export class ProWorkspaceInstance
   extends ManagementV1DevPodWorkspaceInstance

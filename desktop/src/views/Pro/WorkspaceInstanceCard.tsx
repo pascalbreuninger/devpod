@@ -1,17 +1,20 @@
 import { getDisplayName } from "@/lib/pro"
-import { WorkspaceControls } from "@/views/Workspaces/WorkspaceControls"
 import { WorkspaceStatusBadge } from "@/views/Workspaces/WorkspaceStatusBadge"
 import { Box, Card, CardBody, CardHeader, HStack, Text } from "@chakra-ui/react"
 import { useCallback, useState } from "react"
 import { useNavigate } from "react-router"
-import { WorkspaceCardHeader } from "../components"
-import { TActionID, useSettings, useWorkspace } from "../contexts"
-import { useDeleteWorkspaceModal, useResetWorkspaceModal, useStopWorkspaceModal } from "../lib"
-import { Routes } from "../routes"
-import { TWorkspace, TWorkspaceSource } from "../types"
-import { useIDEs } from "../useIDEs"
-import { Annotations, WorkspaceInstanceSource } from "./constants"
-import { ProWorkspaceInstance } from "./workspaceInstance"
+import { WorkspaceCardHeader } from "@/components"
+import { ProWorkspaceInstance, TActionID, useSettings, useWorkspace } from "@/contexts"
+import {
+  useDeleteWorkspaceModal,
+  useResetWorkspaceModal,
+  useStopWorkspaceModal,
+  Annotations,
+  WorkspaceInstanceSource,
+} from "@/lib"
+import { Routes } from "@/routes"
+import { TWorkspace, TWorkspaceSource } from "@/types"
+import { useIDEs } from "@/useIDEs"
 
 type TWorkspaceInstanceCardProps = Readonly<{
   host: string

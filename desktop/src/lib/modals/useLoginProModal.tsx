@@ -29,8 +29,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
-import { ConfigureProviderOptionsForm } from "../Providers/AddProvider"
-import { useSetupProvider } from "../Providers/AddProvider/useSetupProvider"
+import { ConfigureProviderOptionsForm, useSetupProvider } from "@/views/Providers"
 
 type TFormValues = {
   [FieldName.PRO_HOST]: string
