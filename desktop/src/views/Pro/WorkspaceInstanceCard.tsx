@@ -102,7 +102,7 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
         <CardHeader overflow="hidden" w="full">
           <WorkspaceCardHeader
             id={workspaceID!}
-            source={source}
+            source={<Text>{source?.gitRepository}</Text>}
             statusBadge={
               <WorkspaceStatusBadge
                 status={instance.status?.lastWorkspaceStatus as TWorkspace["status"]}

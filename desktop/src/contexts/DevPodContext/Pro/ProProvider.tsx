@@ -1,16 +1,18 @@
-import { client as globalClient } from "@/client"
+import { ProClient, client as globalClient } from "@/client"
 import { ToolbarActions, ToolbarTitle } from "@/components"
 import { Annotations } from "@/lib"
-import { Text } from "@chakra-ui/react"
+import { Routes } from "@/routes"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { useQuery } from "@tanstack/react-query"
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { useProInstances } from "../proInstances"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
+import { HostPicker } from "./HostPicker"
 import { ProjectPicker } from "./ProjectPicker"
-import { Routes } from "@/routes"
-import { ProClient } from "@/client"
+
+const HOST_OSS = "Open Source"
 
 type TProContext = Readonly<{
   managementSelf: ManagementV1Self
@@ -22,6 +24,17 @@ const ProContext = createContext<TProContext>(null!)
 export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
   const navigate = useNavigate()
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
+  const [[proInstances]] = useProInstances()
+  const hosts = useMemo(() => {
+    const h =
+      proInstances
+        ?.map((instance) => instance.host)
+        .filter((instance): instance is string => !!instance)
+        .slice() ?? []
+    h.push(HOST_OSS)
+
+    return h
+  }, [proInstances])
   const client = useMemo(() => globalClient.getProClient(host), [host])
   const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
   const { data: managementSelf } = useQuery({
@@ -66,6 +79,16 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     setSelectedProject(newProject)
   }
 
+  const handleHostChanged = (newHost: string) => {
+    if (newHost === HOST_OSS) {
+      navigate(Routes.WORKSPACES)
+
+      return
+    }
+
+    navigate(Routes.toProInstance(newHost))
+  }
+
   const value = useMemo<TProContext>(() => {
     if (!managementSelf || !currentProject) {
       return null!
@@ -82,16 +105,14 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   return (
     <ProContext.Provider value={value}>
       <ToolbarTitle>
-        <Text onClick={() => navigate(Routes.toProInstance(host))} fontWeight="semibold">
-          {host}
-        </Text>
+        <HostPicker currentHost={host} hosts={hosts} onChange={handleHostChanged} />
       </ToolbarTitle>
       <ToolbarActions>
         {projects && projects.length > 0 && (
           <ProjectPicker
             projects={projects}
             currentProject={currentProject}
-            onChanged={handleProjectChanged}
+            onChange={handleProjectChanged}
           />
         )}
       </ToolbarActions>

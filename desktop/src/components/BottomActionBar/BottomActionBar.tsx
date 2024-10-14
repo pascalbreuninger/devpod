@@ -15,21 +15,41 @@ import { motion } from "framer-motion"
 import { RefObject, createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { ErrorMessageBox } from "../Error"
 
-type TModalBottomBarProps = Readonly<{ isModal?: boolean; children: React.ReactNode }>
+type TModalBottomBarProps = Readonly<{
+  isModal?: boolean
+  hasSidebar?: boolean
+  children: React.ReactNode
+}>
 
 const BottomActionBarContext = createContext<{ ref: RefObject<HTMLDivElement> } | undefined>(
   undefined
 )
-export function BottomActionBar({ isModal = false, children }: TModalBottomBarProps) {
+export function BottomActionBar({
+  isModal = false,
+  hasSidebar = true,
+  children,
+}: TModalBottomBarProps) {
   const ref = useRef<HTMLDivElement>(null)
   const bottomBarBackgroundColor = useColorModeValue("white", "gray.700")
   const bottomBarBackgroundColorModal = useColorModeValue("white", "background.darkest")
   const translateX = useBreakpointValue({
-    base: "translateX(-3rem)",
+    base: hasSidebar ? "translateX(-3rem)" : "",
     xl: isModal ? "translateX(-3rem)" : "",
   })
   const paddingX = useBreakpointValue({ base: "3rem", xl: isModal ? "3rem" : "4" })
   const value = useMemo(() => ({ ref }), [ref])
+
+  const width = useMemo(() => {
+    if (isModal) {
+      return "calc(100% + 5.5rem)"
+    }
+
+    if (hasSidebar) {
+      return { base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }
+    }
+
+    return { base: "100vw", xl: "full" }
+  }, [hasSidebar, isModal])
 
   return (
     <BottomActionBarContext.Provider value={value}>
@@ -42,9 +62,7 @@ export function BottomActionBar({ isModal = false, children }: TModalBottomBarPr
         marginTop="10"
         bottom="-1.1rem"
         left="0"
-        width={
-          isModal ? "calc(100% + 5.5rem)" : { base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }
-        }
+        width={width}
         height="20"
         alignItems="center"
         borderTopWidth="thin"

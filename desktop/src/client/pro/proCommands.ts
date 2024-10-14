@@ -13,6 +13,7 @@ import {
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_LOGIN,
+  DEVPOD_FLAG_PROJECT,
   DEVPOD_FLAG_USE,
   DEVPOD_FLAG_WORKSPACE_ID,
   DEVPOD_FLAG_WORKSPACE_PROJECT,
@@ -143,6 +144,14 @@ export class ProCommands {
   static GetSelf(id: TProID) {
     const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
     const args = [DEVPOD_COMMAND_PRO, "self", hostFlag]
+
+    return ProCommands.newCommand(args)
+  }
+
+  static ListTemplates(id: TProID, projectName: string) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const projectFlag = toFlagArg(DEVPOD_FLAG_PROJECT, projectName)
+    const args = [DEVPOD_COMMAND_PRO, "list-templates", hostFlag, projectFlag]
 
     return ProCommands.newCommand(args)
   }

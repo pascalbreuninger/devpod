@@ -5,9 +5,9 @@ import { getDisplayName } from "@/lib"
 type TProjectPickerProps = Readonly<{
   currentProject: ManagementV1Project
   projects: readonly ManagementV1Project[]
-  onChanged: (newProject: ManagementV1Project) => void
+  onChange: (newProject: ManagementV1Project) => void
 }>
-export function ProjectPicker({ currentProject, projects, onChanged }: TProjectPickerProps) {
+export function ProjectPicker({ currentProject, projects, onChange }: TProjectPickerProps) {
   return (
     <Menu closeOnSelect={true} offset={[0, 2]}>
       <MenuButton as={Button} variant="unstyled">
@@ -18,7 +18,7 @@ export function ProjectPicker({ currentProject, projects, onChanged }: TProjectP
           const id = project.metadata!.name!
 
           return (
-            <MenuItemOption onClick={() => onChanged(project)} key={id} value={id}>
+            <MenuItemOption onClick={() => onChange(project)} key={id} value={id}>
               <HStack>
                 <Text>{getDisplayName(project)}</Text>
               </HStack>
