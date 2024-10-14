@@ -1,10 +1,9 @@
 import { client } from "@/client"
 import { useProInstances, useSettings } from "@/contexts"
 import { Briefcase, CheckCircle, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
-import { exists } from "@/lib"
+import { exists, useLoginProModal, useReLoginProModal } from "@/lib"
 import { Routes } from "@/routes"
 import { TProID, TProInstance, TProInstances } from "@/types"
-import { useLoginProModal, useReLoginProModal } from "@/views/ProInstances/useLoginProModal"
 import { useDeleteProviderModal } from "@/views/Providers/useDeleteProviderModal"
 import { ChevronDownIcon, CloseIcon } from "@chakra-ui/icons"
 import {

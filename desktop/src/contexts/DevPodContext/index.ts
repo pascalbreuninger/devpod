@@ -18,3 +18,4 @@ export {
   WorkspaceStore,
   ProWorkspaceStore,
 } from "./workspaceStore"
+export { useProHost, ProProvider, ProWorkspaceInstance, useProContext } from "./Pro"
