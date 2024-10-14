@@ -18,7 +18,6 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { useQuery } from "@tanstack/react-query"
@@ -35,7 +34,7 @@ import {
 import { App, ErrorPage } from "./App"
 import { useAppReady } from "./App/useAppReady"
 import { client as globalClient } from "./client"
-import { ToolbarActions, ToolbarTitle, WarningMessageBox } from "./components"
+import { ToolbarActions, ToolbarTitle, WarningMessageBox, WorkspaceCardHeader } from "./components"
 import {
   ProWorkspaceStore,
   TActionID,
@@ -46,12 +45,7 @@ import {
 } from "./contexts"
 import { exists } from "./lib"
 import { getDisplayName } from "./lib/pro"
-import {
-  Source,
-  WorkspaceControls,
-  WorkspaceInstanceCard,
-  WorkspaceInstanceHeader,
-} from "./pro/WorkspaceInstanceCard"
+import { Source, WorkspaceInstanceCard } from "./pro/WorkspaceInstanceCard"
 import { Annotations, Labels } from "./pro/constants"
 import { TProID, TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
 import { useIDEs } from "./useIDEs"
@@ -66,6 +60,7 @@ import {
   Settings,
   Workspaces,
 } from "./views"
+import { ProWorkspaceInstance } from "./pro"
 
 export const Routes = {
   ROOT: "/",
@@ -143,10 +138,10 @@ export const Routes = {
 
     return `/pro/${h}`
   },
-  toProWorkspace(host: string, workspaceID: string): string {
+  toProWorkspace(host: string, instanceName: string): string {
     const base = this.toProInstance(host)
 
-    return `${base}/${workspaceID}`
+    return `${base}/${instanceName}`
   },
 } as const
 
@@ -356,7 +351,7 @@ function ListProWorkspaces() {
       <List>
         {workspaces.map((w) => (
           <ListItem key={w.metadata!.name}>
-            <WorkspaceInstanceCard host={host} instanceID={w.metadata!.name!} />
+            <WorkspaceInstanceCard host={host} instanceName={w.metadata!.name!} />
           </ListItem>
         ))}
       </List>
@@ -373,7 +368,7 @@ function useProClient(id: TProID) {
 }
 
 function useProWorkspaces() {
-  const workspaces = useWorkspaces<ManagementV1DevPodWorkspaceInstance>()
+  const workspaces = useWorkspaces<ProWorkspaceInstance>()
   console.log(workspaces)
 
   return workspaces
@@ -386,10 +381,14 @@ const DETAILS_TABS = [
   { label: "History", component: <Box w="full" h="full" opacity={0.3} bg="green" /> },
 ]
 function ProWorkspace() {
+  const { host } = useContext(ProContext)
   const params = useParams()
+  const navigate = useNavigate()
   const settings = useSettings()
-  const workspace = useWorkspace<ManagementV1DevPodWorkspaceInstance>(params.workspace)
+  const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
+  const instanceName = instance?.metadata?.name
+  const workspaceID = instance?.id
   const { ides } = useIDEs()
 
   useEffect(() => {
@@ -408,6 +407,16 @@ function ProWorkspace() {
 
   const isLoading = instance.status?.lastWorkspaceStatus == "loading"
 
+  const handleOpenClicked = () => {
+    if (!instanceName || !workspaceID) {
+      return
+    }
+    console.log(workspaceID)
+
+    workspace.start({ id: workspaceID })
+    navigate(Routes.toProWorkspace(host, instanceName))
+  }
+
   return (
     <VStack align="start" width="full" height="full">
       <VStack align="start" width="full">
@@ -417,29 +426,13 @@ function ProWorkspace() {
           </Link>
         </Box>
         <Box width="full">
-          <WorkspaceInstanceHeader
-            instance={instance}
-            isLoading={isLoading}
-            onActionIndicatorClicked={() => {}}
-            onSelectionChange={() => {}}
-            onCheckStatusClicked={() => {}}>
-            <WorkspaceControls
-              id={instance.metadata!.name!}
-              instance={instance}
-              isLoading={isLoading}
-              isIDEFixed={settings.fixedIDE}
-              ides={ides}
-              ideName={""}
-              setIdeName={() => {}}
-              navigateToAction={() => {}}
-              onRebuildClicked={() => {}}
-              onResetClicked={() => {}}
-              onDeleteClicked={() => {}}
-              onStopClicked={() => {}}
-              onLogsClicked={() => {}}
-              onOpenClicked={() => {}}
-            />
-          </WorkspaceInstanceHeader>
+          <WorkspaceCardHeader
+            id={instanceName!}
+            source={undefined}
+            statusBadge={null}
+            controls={null}>
+            TODO: IMPLEMENT ME
+          </WorkspaceCardHeader>
         </Box>
         <HStack>
           <Text>{instance.status?.lastWorkspaceStatus}</Text>
