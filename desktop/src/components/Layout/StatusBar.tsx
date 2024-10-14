@@ -126,23 +126,33 @@ function DebugMenu() {
     return null
   }
 
+  const handleMenuItemClicked =
+    (option: Parameters<NonNullable<(typeof Debug)["toggle"]>>[0]) => (e: React.MouseEvent) => {
+      Debug.toggle?.(option)
+      e.stopPropagation()
+    }
+
   return (
     <Menu>
       <MenuButton>Debug</MenuButton>
       <MenuList>
-        <MenuItem onClick={() => Debug.toggle?.("commands")}>
+        <MenuItem onClick={handleMenuItemClicked("commands")}>
           <Checkbox isChecked={debug.options.commands} />
           <Text paddingLeft="4">Print command logs</Text>
         </MenuItem>
-        <MenuItem onClick={() => Debug.toggle?.("actions")}>
+        <MenuItem onClick={handleMenuItemClicked("actions")}>
           <Checkbox isChecked={debug.options.actions} />
           <Text paddingLeft="4">Print action logs</Text>
         </MenuItem>
-        <MenuItem onClick={() => Debug.toggle?.("workspaces")}>
+        <MenuItem onClick={handleMenuItemClicked("workspaces")}>
           <Checkbox isChecked={debug.options.workspaces} />
           <Text paddingLeft="4">Print workspace logs</Text>
         </MenuItem>
-        <MenuItem onClick={() => client.openDir("AppData")}>
+        <MenuItem
+          onClick={(e) => {
+            client.openDir("AppData")
+            e.stopPropagation()
+          }}>
           <Text paddingLeft="4">Open app_dir</Text>
         </MenuItem>
       </MenuList>

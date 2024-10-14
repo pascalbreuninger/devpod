@@ -147,13 +147,7 @@ export type TWorkspace = Readonly<{
   }>
   creationTimestamp: string
   lastUsed: string
-  source: TMaybe<{
-    gitRepository: TMaybe<string>
-    gitBranch: TMaybe<string>
-    gitCommit: TMaybe<string>
-    localFolder: TMaybe<string>
-    image: TMaybe<string>
-  }>
+  source: TMaybe<TWorkspaceSource>
 }>
 export type TWorkspaceWithoutStatus = Omit<TWorkspace, "status"> & Readonly<{ status: null }>
 export type TWorkspaceStatusResult = Readonly<{
@@ -175,6 +169,13 @@ export type TWorkspaceStartConfig = Readonly<{
     type?: TWorkspaceSourceType
   }>
 }>
+export type TWorkspaceSource = {
+  gitRepository: TMaybe<string>
+  gitBranch: TMaybe<string>
+  gitCommit: TMaybe<string>
+  localFolder: TMaybe<string>
+  image: TMaybe<string>
+}
 export const SUPPORTED_IDES = [
   "none",
   "vscode",

@@ -1,9 +1,15 @@
 import { useCallback, useId, useMemo, useRef, useSyncExternalStore } from "react"
 import { TStreamEventListenerFn, client } from "../../../client"
 import { exists } from "../../../lib"
-import { TDeepNonNullable, TStreamID, TWorkspaceID, TWorkspaceStartConfig } from "../../../types"
+import {
+  TDeepNonNullable,
+  TIdentifiable,
+  TStreamID,
+  TWorkspaceID,
+  TWorkspaceStartConfig,
+} from "../../../types"
 import { TActionID, TActionObj, useConnectAction, useReplayAction } from "../action"
-import { useWorkspaceStore, IWorkspaceStore } from "../workspaceStore"
+import { IWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 
 export type TWorkspaceResult<T> = Readonly<{
   data: T | undefined
@@ -64,18 +70,28 @@ export function useWorkspaceActions(
   return data
 }
 
-export function useWorkspace<TW>(workspaceID: TWorkspaceID | undefined): TWorkspaceResult<TW> {
+export function useWorkspace<TW extends TIdentifiable>(
+  workspaceKey: string | undefined
+): TWorkspaceResult<TW> {
   const { store } = useWorkspaceStore<IWorkspaceStore<string, TW>>()
   const viewID = useId()
   const data = useSyncExternalStore(
     useCallback((listener) => store.subscribe(listener), [store]),
-    () => (workspaceID !== undefined ? store.get(workspaceID) : undefined)
+    () => (workspaceKey !== undefined ? store.get(workspaceKey) : undefined)
   )
+  const workspaceID = useMemo(() => {
+    if (!data) {
+      return undefined
+    }
+
+    return data.id
+  }, [data])
+
   const create = useCallback<TWorkspaceResult<TW>["create"]>(
     (config, onStream) => {
       return store.startAction({
         actionName: "start",
-        workspaceID: config.id,
+        workspaceKey: config.id,
         actionFn: async (ctx) => {
           const result = await client.workspaces.start(config, onStream, {
             id: config.id,
@@ -113,7 +129,7 @@ export function useWorkspace<TW>(workspaceID: TWorkspaceID | undefined): TWorksp
 
       return store.startAction({
         actionName: "checkStatus",
-        workspaceID,
+        workspaceKey: workspaceID,
         actionFn: async (ctx) => {
           const result = await client.workspaces.checkStatus(onStream, {
             id: workspaceID,
@@ -151,7 +167,7 @@ export function useWorkspace<TW>(workspaceID: TWorkspaceID | undefined): TWorksp
 
       return store.startAction({
         actionName: "rebuild",
-        workspaceID,
+        workspaceKey: workspaceID,
         actionFn: async (ctx) => {
           const result = await client.workspaces.rebuild(onStream, {
             id: workspaceID,
@@ -178,7 +194,7 @@ export function useWorkspace<TW>(workspaceID: TWorkspaceID | undefined): TWorksp
 
       return store.startAction({
         actionName: "reset",
-        workspaceID,
+        workspaceKey: workspaceID,
         actionFn: async (ctx) => {
           const result = await client.workspaces.reset(onStream, {
             id: workspaceID,
@@ -265,7 +281,7 @@ export function startWorkspaceAction({
 }: TStartWorkspaceActionArgs): TActionObj["id"] {
   return store.startAction({
     actionName: "start",
-    workspaceID,
+    workspaceKey: workspaceID,
     actionFn: async (ctx) => {
       const result = await client.workspaces.start(config, onStream, {
         id: workspaceID,
@@ -296,7 +312,7 @@ export function stopWorkspaceAction({
 }: TStopWorkspaceActionArgs): TActionObj["id"] {
   return store.startAction({
     actionName: "stop",
-    workspaceID,
+    workspaceKey: workspaceID,
     actionFn: async (ctx) => {
       const result = await client.workspaces.stop(onStream, {
         id: workspaceID,
@@ -329,7 +345,7 @@ export function removeWorkspaceAction({
 }: TRemoveWorkspaceActionArgs): TActionObj["id"] {
   return store.startAction({
     actionName: "remove",
-    workspaceID,
+    workspaceKey: workspaceID,
     actionFn: async (ctx) => {
       const result = await client.workspaces.remove(force, onStream, {
         id: workspaceID,

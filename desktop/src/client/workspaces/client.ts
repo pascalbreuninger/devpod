@@ -14,6 +14,11 @@ import { TCommand, TStreamEventListenerFn } from "../command"
 import { CommandCache, TCommandCacheInfo } from "../commandCache"
 import { TDebuggable, TStreamEvent } from "../types"
 import { WorkspaceCommands } from "./workspaceCommands"
+import {
+  DEVPOD_FLAG_DOTFILES,
+  DEVPOD_FLAG_GIT_SIGNING_KEY,
+  WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY,
+} from "../constants"
 
 // Every workspace can have one active action at a time,
 // but multiple views might need to listen to the same action.
@@ -92,17 +97,21 @@ export class WorkspacesClient implements TDebuggable {
   }
 
   public setDotfilesFlag(dotfilesUrl: string): void {
-    WorkspaceCommands.ADDITIONAL_FLAGS =
-      WorkspaceCommands.ADDITIONAL_FLAGS + " --dotfiles=" + dotfilesUrl
+    if (!dotfilesUrl) {
+      return
+    }
+    WorkspaceCommands.ADDITIONAL_FLAGS.set(DEVPOD_FLAG_DOTFILES, dotfilesUrl)
   }
 
   public setAdditionalFlags(additionalFlags: string): void {
-    WorkspaceCommands.ADDITIONAL_FLAGS = additionalFlags
+    WorkspaceCommands.ADDITIONAL_FLAGS.set(WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY, additionalFlags)
   }
 
   public setSSHKeyPath(sshKeyPath: string): void {
-    WorkspaceCommands.ADDITIONAL_FLAGS =
-      WorkspaceCommands.ADDITIONAL_FLAGS + " --git-ssh-signing-key=" + sshKeyPath
+    if (!sshKeyPath) {
+      return
+    }
+    WorkspaceCommands.ADDITIONAL_FLAGS.set(DEVPOD_FLAG_GIT_SIGNING_KEY, sshKeyPath)
   }
 
   public async listAll(

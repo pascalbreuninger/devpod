@@ -1,10 +1,11 @@
-import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { Result, ResultError, Return } from "../../lib"
 import { TImportWorkspaceConfig, TListProInstancesConfig, TProID, TProInstance } from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
+import { ProWorkspaceInstance } from "@/pro"
+import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 
 export class ProClient implements TDebuggable {
   constructor(private readonly id: string) {}
@@ -33,16 +34,18 @@ export class ProClient implements TDebuggable {
     return ProCommands.ImportWorkspace(config)
   }
 
-  public watchWorkspaces(
-    listener: (newWorkspaces: readonly ManagementV1DevPodWorkspaceInstance[]) => void
-  ) {
+  public watchWorkspaces(listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void) {
     const cmd = ProCommands.WatchWorkspaces(this.id)
 
     // kick off stream in the background
     cmd.stream((event) => {
       if (event.type === "data") {
         // FIXME: types
-        listener(event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[])
+        const rawInstances = event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[]
+        const workspaceInstances = rawInstances.map(
+          (instance) => new ProWorkspaceInstance(instance)
+        )
+        listener(workspaceInstances)
       }
     })
 

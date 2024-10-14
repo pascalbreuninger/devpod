@@ -6,7 +6,7 @@ import {
   TWorkspaceStatusResult,
   TWorkspaceWithoutStatus,
 } from "../../types"
-import { Command, isOk, serializeRawOptions, toFlagArg, toMultipleFlagArg } from "../command"
+import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_WORKSPACE_CONFIG,
@@ -31,6 +31,7 @@ import {
   DEVPOD_FLAG_SKIP_PRO,
   DEVPOD_FLAG_SOURCE,
   DEVPOD_FLAG_TIMEOUT,
+  WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY,
 } from "../constants"
 
 type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
@@ -38,7 +39,7 @@ type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
 
 export class WorkspaceCommands {
   static DEBUG = false
-  static ADDITIONAL_FLAGS = ""
+  static ADDITIONAL_FLAGS = new Map<string, string>()
 
   private static newCommand(args: string[]): Command {
     const extraFlags = []
@@ -139,10 +140,17 @@ export class WorkspaceCommands {
       ? [toFlagArg(DEVPOD_FLAG_DEVCONTAINER_PATH, config.devcontainerPath)]
       : []
 
-    const additionalFlags =
-      WorkspaceCommands.ADDITIONAL_FLAGS.length !== 0
-        ? toMultipleFlagArg(WorkspaceCommands.ADDITIONAL_FLAGS)
-        : []
+    const additionalFlags = []
+    if (WorkspaceCommands.ADDITIONAL_FLAGS.size > 0) {
+      for (const [key, value] of WorkspaceCommands.ADDITIONAL_FLAGS.entries()) {
+        if (key === WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY) {
+          additionalFlags.push(value)
+          continue
+        }
+
+        additionalFlags.push(toFlagArg(key, value))
+      }
+    }
 
     return WorkspaceCommands.newCommand([
       DEVPOD_COMMAND_UP,
