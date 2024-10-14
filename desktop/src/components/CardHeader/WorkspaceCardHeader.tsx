@@ -11,21 +11,21 @@ import { Routes } from "../../routes"
 
 type TWorkspaceCardHeaderProps = Readonly<{
   id: string
-  source: TWorkspaceSource | undefined
   statusBadge?: ReactNode
   controls?: ReactNode
   children?: ReactNode
+  source?: ReactNode
 
   isSelected?: boolean
   onSelectionChange?: (isSelected: boolean) => void
 }>
 export function WorkspaceCardHeader({
   id,
-  source,
   isSelected,
   onSelectionChange,
   statusBadge,
   controls,
+  source,
   children,
 }: TWorkspaceCardHeaderProps) {
   const checkboxID = useId()
@@ -59,21 +59,7 @@ export function WorkspaceCardHeader({
           </Heading>
           <Box marginLeft="auto">{controls}</Box>
         </HStack>
-        {source && (
-          <Text
-            paddingLeft="8"
-            fontSize="sm"
-            color="gray.500"
-            userSelect="auto"
-            maxWidth="30rem"
-            overflow="hidden"
-            whiteSpace="nowrap"
-            textOverflow="ellipsis"
-            marginTop={-0.5}
-            _hover={{ overflow: "visible", cursor: "text" }}>
-            {getWorkspaceSourceName(source)}
-          </Text>
-        )}
+        {source}
       </VStack>
 
       <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center" paddingLeft="8">

@@ -29,7 +29,7 @@ func NewWorkspacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	}
 	c := &cobra.Command{
 		Use:   "workspaces",
-		Short: "Lists workspaces for the DevPod provider",
+		Short: "Lists workspaces for the provider",
 		Args:  cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd.Context())
