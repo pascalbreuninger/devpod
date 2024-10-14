@@ -4,6 +4,8 @@ export const DEFAULT_STATIC_COMMAND_CONFIG = {
   streamResponse: false,
   debug: false,
 } as const
+/** placeholder for arbitrary additional flags */
+export const WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY = "additionalFlags"
 
 export const DEVPOD_BINARY = "bin/devpod-cli"
 export const DEVPOD_COMMAND_LIST = "list"
@@ -58,5 +60,7 @@ export const DEVPOD_FLAG_WORKSPACE_PROJECT = "--workspace-project"
 export const DEVPOD_FLAG_LOGIN = "--login"
 export const DEVPOD_FLAG_HOST = "--host"
 export const DEVPOD_FLAG_SKIP_PRO = "--skip-pro"
+export const DEVPOD_FLAG_DOTFILES = "--dotfiles"
+export const DEVPOD_FLAG_GIT_SIGNING_KEY = "--git-ssh-signing-key="
 
 export const DEVPOD_UI_ENV_VAR = "DEVPOD_UI"

@@ -196,12 +196,6 @@ export function toFlagArg(flag: string, arg: string) {
   return [flag, arg].join("=")
 }
 
-export function toMultipleFlagArg(input: string) {
-  const equaledInput = input.replace(/([a-zA-Z])\s+([a-zA-Z])/g, "$1=$2")
-
-  return equaledInput.split(" ")
-}
-
 export function serializeRawOptions(
   rawOptions: Record<string, unknown>,
   flag: string = DEVPOD_FLAG_OPTION

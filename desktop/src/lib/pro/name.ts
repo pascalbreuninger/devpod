@@ -1,17 +1,19 @@
 export function getDisplayName(
-  entity: Readonly<{
-    metadata?: { name?: string }
-    spec?: {
-      displayName?: string
-    }
-  }>,
+  entity:
+    | Readonly<{
+        metadata?: { name?: string }
+        spec?: {
+          displayName?: string
+        }
+      }>
+    | undefined,
   fallback: string = ""
 ): string {
-  if (entity.spec?.displayName) {
+  if (entity?.spec?.displayName) {
     return entity.spec.displayName
   }
 
-  if (entity.metadata?.name) {
+  if (entity?.metadata?.name) {
     return entity.metadata.name
   }
 

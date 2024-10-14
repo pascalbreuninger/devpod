@@ -2,6 +2,8 @@ import { TIDE, TLogOutput } from "../types"
 import { ChildProcess } from "@tauri-apps/api/shell"
 import { Err, Failed, Return } from "./result"
 import { TActionObj } from "../contexts"
+import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "@/constants"
+import { TWorkspace, TIDEs } from "@/types"
 
 export function exists<T extends any | null | undefined>(
   arg: T
@@ -117,4 +119,40 @@ export function randomString(length: number): string {
 
 export function remToPx(rem: string): number {
   return parseFloat(rem) * parseFloat(getComputedStyle(document.documentElement).fontSize)
+}
+
+export function getIDEName(ide: TWorkspace["ide"], ides: TIDEs | undefined) {
+  const maybeIDE = ides?.find((i) => i.name === ide?.name)
+
+  return maybeIDE?.displayName ?? ide?.name ?? maybeIDE?.name ?? "Unknown"
+}
+
+export function getWorkspaceSourceName({
+  gitRepository,
+  gitBranch,
+  gitCommit,
+  localFolder,
+  image,
+}: NonNullable<TWorkspace["source"]>): string {
+  if (exists(gitRepository) && exists(gitCommit)) {
+    return `${gitRepository}${WORKSPACE_SOURCE_COMMIT_DELIMITER}${gitCommit}`
+  }
+
+  if (exists(gitRepository) && exists(gitBranch)) {
+    return `${gitRepository}${WORKSPACE_SOURCE_BRANCH_DELIMITER}${gitBranch}`
+  }
+
+  if (exists(gitRepository)) {
+    return gitRepository
+  }
+
+  if (exists(image)) {
+    return image
+  }
+
+  if (exists(localFolder)) {
+    return localFolder
+  }
+
+  return ""
 }
