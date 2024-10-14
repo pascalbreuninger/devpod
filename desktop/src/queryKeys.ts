@@ -35,6 +35,9 @@ export const QueryKeys = {
   providerUpdate(id: TProviderID): string[] {
     return [...QueryKeys.provider(id), "update"]
   },
+  proWorkspaceTemplates(host: string, project: string): string[] {
+    return ["workspaceTemplates", host, project]
+  },
 }
 
 export const MutationKeys = {

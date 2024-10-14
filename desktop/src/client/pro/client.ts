@@ -5,6 +5,7 @@ import { TImportWorkspaceConfig, TListProInstancesConfig, TProID, TProInstance }
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
+import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
 import { ProWorkspaceInstance } from "@/contexts"
 
 export class ProClient implements TDebuggable {
@@ -86,6 +87,25 @@ export class ProClient implements TDebuggable {
       console.error(err)
 
       return Return.Failed("failed to list projects")
+    }
+  }
+
+  public async getProjectTemplates(
+    projectName: string
+  ): Promise<Result<ManagementV1ProjectTemplates>> {
+    const res = await ProCommands.ListTemplates(this.id, projectName).run()
+    if (res.err) {
+      return res
+    }
+
+    try {
+      const projectTemplates = JSON.parse(res.val.stdout) as ManagementV1ProjectTemplates
+
+      return Return.Value(projectTemplates)
+    } catch (err) {
+      console.error(err)
+
+      return Return.Failed("failed to get project templates")
     }
   }
 }

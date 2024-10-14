@@ -1,18 +1,31 @@
 import { ProWorkspaceInstance, useProContext, useWorkspaces } from "@/contexts"
-import { Heading, Link, List, ListItem } from "@chakra-ui/react"
-import { Link as RouterLink } from "react-router-dom"
+import { DevPodIcon } from "@/icons"
+import { Routes } from "@/routes"
+import { Box, Button, HStack, Heading, List, ListItem } from "@chakra-ui/react"
+import { useNavigate } from "react-router"
 import { WorkspaceInstanceCard } from "./WorkspaceInstanceCard"
 
 export function ListWorkspaces() {
   const workspaces = useWorkspaces<ProWorkspaceInstance>()
   const { host } = useProContext()
+  const navigate = useNavigate()
+
+  const handleCreateClicked = () => {
+    navigate(Routes.toProWorkspaceCreate(host))
+  }
 
   return (
-    <div>
-      <Heading>Workspaces</Heading>
-      <Link as={RouterLink} to="/">
-        Home
-      </Link>
+    <Box>
+      <HStack align="center" justify="space-between" mb="8">
+        <Heading fontWeight="thin">Workspaces</Heading>
+        <Button
+          variant="outline"
+          colorScheme="primary"
+          leftIcon={<DevPodIcon boxSize={5} />}
+          onClick={handleCreateClicked}>
+          Create Workspace
+        </Button>
+      </HStack>
       <List>
         {workspaces.map((w) => (
           <ListItem key={w.metadata!.name}>
@@ -20,6 +33,6 @@ export function ListWorkspaces() {
           </ListItem>
         ))}
       </List>
-    </div>
+    </Box>
   )
 }

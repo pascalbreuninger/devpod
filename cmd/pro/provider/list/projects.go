@@ -27,7 +27,7 @@ func NewProjectsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	}
 	c := &cobra.Command{
 		Use:   "projects",
-		Short: "Lists projects for the DevPod provider",
+		Short: "Lists projects for the provider",
 		Args:  cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd.Context())

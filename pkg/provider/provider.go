@@ -274,8 +274,11 @@ type ListProxyCommands struct {
 	// Workspaces lists all workspaces
 	Workspaces types.StrArray `json:"workspaces,omitempty"`
 
-	// Projects lists all workspaces
+	// Projects lists all projects
 	Projects types.StrArray `json:"projects,omitempty"`
+
+	// Templates lists all templates in a project
+	Templates types.StrArray `json:"templates,omitempty"`
 }
 
 type WatchProxyCommands struct {

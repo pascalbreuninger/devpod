@@ -7,7 +7,9 @@ import { useChangeSettings } from "../../SettingsContext"
 import { REFETCH_INTERVAL_MS } from "../constants"
 
 export type TProInstancesContext = TQueryResult<TProInstances>
-export const ProInstancesContext = createContext<TProInstancesContext>(null!)
+export const ProInstancesContext = createContext<TProInstancesContext>([
+  [],
+] as unknown as TProInstancesContext)
 
 export function ProInstancesProvider({ children }: Readonly<{ children?: ReactNode }>) {
   const { set } = useChangeSettings()

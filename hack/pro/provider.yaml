@@ -53,3 +53,5 @@ exec:
         ${PRO_PROVIDER} pro provider list workspaces
       projects: |-
         ${PRO_PROVIDER} pro provider list projects
+      templates: |-
+        ${PRO_PROVIDER} pro provider list templates

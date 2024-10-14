@@ -1,7 +1,8 @@
 import { useEffect } from "react"
-import { Location, useLocation } from "react-router"
+import { Location, matchRoutes, useLocation } from "react-router"
 import { client } from "../client"
 import { LocalStorageBackend, Store } from "../lib"
+import { Routes } from "@/routes"
 
 const LOCATION_KEY = "location"
 const CURRENT_LOCATION_KEY = "current"
@@ -12,6 +13,20 @@ export function usePreserveLocation() {
   const location = useLocation()
 
   useEffect(() => {
+    // only save location for these routes
+    const match = matchRoutes(
+      [
+        { path: Routes.ROOT },
+        { path: `${Routes.PROVIDER}/*` },
+        { path: `${Routes.WORKSPACES}/*` },
+        { path: `${Routes.PRO}/*` },
+      ],
+      location
+    )
+    if (match == null) {
+      return
+    }
+
     try {
       store.set(CURRENT_LOCATION_KEY, location)
     } catch (err) {

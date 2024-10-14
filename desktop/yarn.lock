@@ -2288,9 +2288,9 @@
   optionalDependencies:
     openid-client "^5.3.0"
 
-"@loft-enterprise/client@https://github.com/loft-sh/loft-javascript-client", "@loft-enterprise/client@https://github.com/loft-sh/loft-javascript-client#v4.1.0-alpha.15":
+"@loft-enterprise/client@https://github.com/loft-sh/loft-javascript-client#v4.1.0-alpha.16":
   version "0.1.0"
-  resolved "https://github.com/loft-sh/loft-javascript-client#43e40a21faf433dc67d2991d08b84340a8395f48"
+  resolved "https://github.com/loft-sh/loft-javascript-client#5ddc460c6e363b24b263cfb570c988fe2faaf6c5"
   dependencies:
     "@kubernetes/client-node" "0.20.0"
     js-cookie "3.0.1"

@@ -29,12 +29,10 @@ export function Workspace() {
   const { host } = useProContext()
   const params = useParams()
   const navigate = useNavigate()
-  const settings = useSettings()
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
   const instanceName = instance?.metadata?.name
   const workspaceID = instance?.id
-  const { ides } = useIDEs()
 
   useEffect(() => {
     workspace.current?.connect((e) => {

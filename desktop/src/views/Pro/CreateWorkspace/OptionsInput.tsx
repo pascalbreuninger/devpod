@@ -1,0 +1,242 @@
+import { useBorderColor } from "@/Theme"
+import { exists, getDisplayName } from "@/lib"
+import { TProviderOption } from "@/types"
+import { TOptionWithID } from "@/views/Providers"
+import {
+  FormControl,
+  FormErrorMessage,
+  FormHelperText,
+  FormLabel,
+  Input,
+  Select,
+  SimpleGrid,
+  Switch,
+  Textarea,
+  VStack,
+  useColorModeValue,
+} from "@chakra-ui/react"
+import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
+import { StorageV1AppParameter } from "@loft-enterprise/client/gen/models/storageV1AppParameter"
+import { ReactNode, useMemo } from "react"
+import { useFormContext } from "react-hook-form"
+import { FieldName } from "./types"
+
+type TOptionsInputProps = Readonly<{
+  workspaceTemplates: readonly ManagementV1DevPodWorkspaceTemplate[]
+  defaultWorkspaceTemplate: ManagementV1DevPodWorkspaceTemplate | undefined
+}>
+export function OptionsInput({
+  workspaceTemplates: templates,
+  defaultWorkspaceTemplate,
+}: TOptionsInputProps) {
+  const { watch } = useFormContext()
+  const borderColor = useBorderColor()
+
+  const defaultTemplate = defaultWorkspaceTemplate ?? templates[0]
+  const selectedTemplateName = watch(`${FieldName.OPTIONS}.workspaceTemplate`, defaultTemplate)
+  const currentTemplate = useMemo(
+    () => templates.find((template) => template.metadata?.name === selectedTemplateName),
+    [selectedTemplateName, templates]
+  )
+  const currentParameters = currentTemplate?.spec?.parameters
+
+  return (
+    <VStack
+      align="start"
+      padding="8"
+      gap="4"
+      bg="gray.50"
+      borderRadius="md"
+      borderWidth="thin"
+      borderColor={borderColor}>
+      <FormControl>
+        <OptionFormField
+          id={`${FieldName.OPTIONS}.workspaceTemplate`}
+          isRequired
+          type="string"
+          defaultValue={defaultTemplate?.metadata?.name}
+          displayName="Infrastructure Template"
+          enum={templates.map((template) => ({
+            value: template.metadata!.name!,
+            displayName: getDisplayName(template),
+          }))}
+        />
+      </FormControl>
+
+      {currentParameters && currentParameters.length > 0 && (
+        <SimpleGrid columns={[2]} gap="4" borderRadius={"md"} w="full">
+          {currentParameters.map((param) => {
+            const paramID = param.variable
+            if (!paramID) {
+              return null
+            }
+            const fieldID = `${FieldName.OPTIONS}.${paramID}`
+
+            return (
+              <OptionFormField
+                key={fieldID}
+                id={fieldID}
+                displayName={param.label ?? paramID}
+                description={param.description}
+                defaultValue={param.defaultValue}
+                type={convertParameterType(param.type)}
+                enum={param.options?.map((option) => ({
+                  value: option,
+                  displayName: option,
+                }))}
+                isRequired={param.required}
+              />
+            )
+          })}
+        </SimpleGrid>
+      )}
+    </VStack>
+  )
+}
+
+type TOptionFormFieldProps = Partial<
+  Pick<TOptionWithID, "type" | "displayName" | "defaultValue" | "description" | "enum">
+> &
+  Readonly<{
+    id: string
+    isRequired?: boolean
+    placeholder?: string
+  }>
+function OptionFormField({
+  id,
+  defaultValue,
+  description,
+  type,
+  displayName,
+  enum: enumProp,
+  placeholder,
+  isRequired = false,
+}: TOptionFormFieldProps) {
+  const inputBackground = useColorModeValue("white", "black")
+  const { register, formState } = useFormContext()
+  const optionError = formState.errors[id]
+
+  const input = useMemo<ReactNode>(() => {
+    const registerProps = register(id, { required: isRequired })
+    const defaultValueProp = exists(defaultValue) ? { defaultValue } : {}
+    const props = {
+      ...defaultValueProp,
+      ...registerProps,
+      background: inputBackground,
+    }
+
+    if (enumProp?.length) {
+      let ph: string | undefined = placeholder ?? "Select option"
+      if (defaultValue) {
+        ph = undefined
+      }
+
+      return (
+        <Select {...props} placeholder={ph}>
+          {enumProp.map(
+            (opt, i) =>
+              opt.value && (
+                <option key={i} value={opt.value}>
+                  {opt.displayName ?? opt.value}
+                </option>
+              )
+          )}
+        </Select>
+      )
+    }
+
+    switch (type) {
+      case "boolean":
+        return <Switch {...props}>{displayName}</Switch>
+      case "number":
+        return (
+          <Input
+            spellCheck={false}
+            placeholder={placeholder ?? `Enter ${displayName}`}
+            type="number"
+            {...props}
+          />
+        )
+      case "duration":
+        return (
+          <Input
+            spellCheck={false}
+            placeholder={placeholder ?? `Enter ${displayName}`}
+            type="text"
+            {...props}
+          />
+        )
+      case "string":
+        return (
+          <Input
+            spellCheck={false}
+            placeholder={placeholder ?? `Enter ${displayName}`}
+            type="text"
+            {...props}
+          />
+        )
+      case "multiline":
+        return (
+          <Textarea
+            rows={2}
+            spellCheck={false}
+            placeholder={placeholder ?? `Enter ${displayName}`}
+            whiteSpace="pre"
+            {...props}
+          />
+        )
+      default:
+        return (
+          <Input
+            spellCheck={false}
+            placeholder={placeholder ?? `Enter ${displayName}`}
+            type="text"
+            {...props}
+          />
+        )
+    }
+  }, [
+    register,
+    id,
+    isRequired,
+    defaultValue,
+    inputBackground,
+    enumProp,
+    type,
+    placeholder,
+    displayName,
+  ])
+
+  return (
+    <FormControl isRequired={isRequired}>
+      <FormLabel fontSize="sm">{displayName}</FormLabel>
+
+      {exists(optionError) ? (
+        <FormErrorMessage>{optionError.message?.toString() ?? "Error"}</FormErrorMessage>
+      ) : (
+        exists(description) && <FormHelperText userSelect="auto">{description}</FormHelperText>
+      )}
+
+      {input}
+    </FormControl>
+  )
+}
+
+function convertParameterType(paramType: StorageV1AppParameter["type"]): TProviderOption["type"] {
+  if (!paramType) {
+    return undefined
+  }
+
+  switch (paramType) {
+    case "string":
+      return "string"
+    case "multiline":
+      return "multiline"
+    case "number":
+      return "number"
+    case "password":
+      return "string"
+    default:
+      return undefined
+  }
+}

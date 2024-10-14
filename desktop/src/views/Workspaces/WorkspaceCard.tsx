@@ -1,4 +1,4 @@
-import { Card, CardHeader } from "@chakra-ui/react"
+import { Card, CardHeader, Text } from "@chakra-ui/react"
 import { useCallback, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceCardHeader } from "../../components"
@@ -11,6 +11,7 @@ import {
 } from "../../contexts"
 import {
   getIDEName,
+  getWorkspaceSourceName,
   useDeleteWorkspaceModal,
   useRebuildWorkspaceModal,
   useResetWorkspaceModal,
@@ -152,7 +153,22 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
         <CardHeader overflow="hidden" w="full">
           <WorkspaceCardHeader
             id={workspace.data.id}
-            source={workspace.data.source ?? undefined}
+            source={
+              workspace.data.source && (
+                <Text
+                  fontSize="sm"
+                  color="gray.500"
+                  userSelect="auto"
+                  maxWidth="30rem"
+                  overflow="hidden"
+                  whiteSpace="nowrap"
+                  textOverflow="ellipsis"
+                  marginTop={-0.5}
+                  _hover={{ overflow: "visible", cursor: "text" }}>
+                  {getWorkspaceSourceName(workspace.data.source)}
+                </Text>
+              )
+            }
             isSelected={isSelected}
             onSelectionChange={onSelectionChange}
             statusBadge={
