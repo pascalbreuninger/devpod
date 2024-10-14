@@ -16,9 +16,8 @@ import { client } from "../client"
 import { ErrorMessageBox } from "../components"
 import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "../constants"
 import { startWorkspaceAction, useChangeSettings, useWorkspaceStore } from "../contexts"
-import { exists } from "../lib"
+import { exists, useLoginProModal } from "../lib"
 import { Routes } from "../routes"
-import { useLoginProModal } from "../views"
 import { useChangelogModal } from "./useChangelogModal"
 
 export function useAppReady() {

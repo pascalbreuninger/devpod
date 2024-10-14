@@ -5,12 +5,14 @@ import { Notifications, StatusBar, Toolbar } from "../components"
 import { STATUS_BAR_HEIGHT } from "../constants"
 import {
   ProInstancesProvider,
+  ProProvider,
   ProWorkspaceStore,
   ToolbarProvider,
   WorkspaceStoreProvider,
+  useProHost,
 } from "../contexts"
 import { Cog } from "../icons"
-import { ProProvider, Routes, useProHost } from "../routes"
+import { Routes } from "../routes"
 import { useMemo } from "react"
 
 export function ProApp() {

@@ -4,8 +4,8 @@ import { Result, ResultError, Return } from "../../lib"
 import { TImportWorkspaceConfig, TListProInstancesConfig, TProID, TProInstance } from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
-import { ProWorkspaceInstance } from "@/pro"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
+import { ProWorkspaceInstance } from "@/contexts"
 
 export class ProClient implements TDebuggable {
   constructor(private readonly id: string) {}
