@@ -11,6 +11,7 @@ import {
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_WORKSPACE_CONFIG,
   DEVPOD_COMMAND_GET_WORKSPACE_NAME,
+  DEVPOD_COMMAND_GET_WORKSPACE_UID,
   DEVPOD_COMMAND_HELPER,
   DEVPOD_COMMAND_LIST,
   DEVPOD_COMMAND_STATUS,
@@ -100,6 +101,22 @@ export class WorkspaceCommands {
 
     if (!isOk(result.val)) {
       return Return.Failed(`Failed to get ID for workspace source ${source}: ${result.val.stderr}`)
+    }
+
+    return Return.Value(result.val.stdout)
+  }
+
+  static async GetWorkspaceUID() {
+    const result = await new Command([
+      DEVPOD_COMMAND_HELPER,
+      DEVPOD_COMMAND_GET_WORKSPACE_UID,
+    ]).run()
+    if (result.err) {
+      return result
+    }
+
+    if (!isOk(result.val)) {
+      return Return.Failed(`Failed to get UID: ${result.val.stderr}`)
     }
 
     return Return.Value(result.val.stdout)

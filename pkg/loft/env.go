@@ -5,6 +5,7 @@ const (
 	WorkspaceUIDEnv      = "WORKSPACE_UID"
 	WorkspaceContextEnv  = "WORKSPACE_CONTEXT"
 	WorkspaceProviderEnv = "WORKSPACE_PROVIDER"
+	WorkspaceInstanceEnv = "WORKSPACE_INSTANCE"
 
 	ConfigEnv  = "LOFT_CONFIG"
 	ProjectEnv = "LOFT_PROJECT"

@@ -25,6 +25,7 @@ export function ProApp() {
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
   const toolbarHeight = useToken("sizes", "10")
   const borderColor = useBorderColor()
+  const iconColor = useColorModeValue("black", "white")
 
   return (
     <WorkspaceStoreProvider store={store}>
@@ -59,9 +60,8 @@ export function ProApp() {
                         </Box>
                       </HStack>
                       <HStack>
-                        <Link as={RouterLink} to={Routes.SETTINGS}>
-                          {/* TODO: Pro settings! */}
-                          <Cog />
+                        <Link as={RouterLink} to={Routes.toProSettings(host)}>
+                          <Cog color={iconColor} />
                         </Link>
                         <Notifications />
                       </HStack>
