@@ -32,6 +32,7 @@
     "compare-versions": "6.1.1",
     "dayjs": "1.11.10",
     "framer-motion": "10.16.9",
+    "js-yaml": "4.1.0",
     "markdown-to-jsx": "7.3.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
