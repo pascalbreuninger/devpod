@@ -218,7 +218,6 @@ export class WorkspaceStore implements IWorkspaceStore<TWorkspaceID, TWorkspace>
   }
 }
 
-/** "devpodworkspaceinstance.metadata.name" */
 type TInstanceID = string
 export class ProWorkspaceStore implements IWorkspaceStore<TInstanceID, ProWorkspaceInstance> {
   private store: InternalWorkspaceStore<TInstanceID, ProWorkspaceInstance>
@@ -238,18 +237,16 @@ export class ProWorkspaceStore implements IWorkspaceStore<TInstanceID, ProWorksp
     return this.store.setWorkspace(key, newWorkspace)
   }
 
-  public setWorkspaces(newWorkspaces: readonly ProWorkspaceInstance[]): void {
-    const prevWorkspaces = this.store.getAll()
+  public setWorkspaces(newInstances: readonly ProWorkspaceInstance[]): void {
+    const prevInstances = this.store.getAll()
 
-    const workspaces = replaceEqualDeep(prevWorkspaces, newWorkspaces)
+    const instances = replaceEqualDeep(prevInstances, newInstances)
 
-    if (Object.is(workspaces, prevWorkspaces)) {
+    if (Object.is(instances, prevInstances)) {
       return
     }
 
-    const newWorkspacesMap = new Map(
-      workspaces.map((workspace) => [workspace.metadata?.name!, workspace])
-    )
+    const newWorkspacesMap = new Map(instances.map((instance) => [instance.id, instance]))
 
     this.store.setWorkspaces(newWorkspacesMap)
   }

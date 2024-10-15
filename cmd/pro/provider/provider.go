@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
+	"github.com/loft-sh/devpod/cmd/pro/provider/create"
 	"github.com/loft-sh/devpod/cmd/pro/provider/list"
 	"github.com/loft-sh/devpod/cmd/pro/provider/watch"
 	"github.com/loft-sh/devpod/pkg/loft"
@@ -29,8 +30,9 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	c.AddCommand(list.NewListCmd(globalFlags))
-	c.AddCommand(watch.NewWatchCmd(globalFlags))
+	c.AddCommand(list.NewCmd(globalFlags))
+	c.AddCommand(watch.NewCmd(globalFlags))
+	c.AddCommand(create.NewCmd(globalFlags))
 	c.AddCommand(NewSelfCmd(globalFlags))
 
 	c.AddCommand(NewUpCmd(globalFlags))

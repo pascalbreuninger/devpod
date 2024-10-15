@@ -4,15 +4,28 @@ import { Routes } from "@/routes"
 import { Box, Button, HStack, Heading, List, ListItem } from "@chakra-ui/react"
 import { useNavigate } from "react-router"
 import { WorkspaceInstanceCard } from "./WorkspaceInstanceCard"
+import { getProjectNamespace } from "@loft-enterprise/client"
+import { useMemo } from "react"
 
 export function ListWorkspaces() {
-  const workspaces = useWorkspaces<ProWorkspaceInstance>()
-  const { host } = useProContext()
+  const instances = useWorkspaces<ProWorkspaceInstance>()
+  const { host, currentProject, managementSelf } = useProContext()
   const navigate = useNavigate()
 
   const handleCreateClicked = () => {
     navigate(Routes.toProWorkspaceCreate(host))
   }
+
+  const projectInstances = useMemo(() => {
+    return instances.filter(
+      (instance) =>
+        instance.metadata?.namespace ===
+        getProjectNamespace(
+          currentProject.metadata!.name!,
+          managementSelf.status?.projectNamespacePrefix
+        )
+    )
+  }, [currentProject.metadata, instances, managementSelf.status?.projectNamespacePrefix])
 
   return (
     <Box>
@@ -27,9 +40,9 @@ export function ListWorkspaces() {
         </Button>
       </HStack>
       <List>
-        {workspaces.map((w) => (
-          <ListItem key={w.metadata!.name}>
-            <WorkspaceInstanceCard host={host} instanceName={w.metadata!.name!} />
+        {projectInstances.map((instance) => (
+          <ListItem key={instance.id}>
+            <WorkspaceInstanceCard host={host} instanceName={instance.id} />
           </ListItem>
         ))}
       </List>

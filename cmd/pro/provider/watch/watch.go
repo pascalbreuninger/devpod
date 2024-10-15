@@ -5,8 +5,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewWatchCmd creates a new cobra command
-func NewWatchCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+// NewCmd creates a new cobra command
+func NewCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	c := &cobra.Command{
 		Use:    "watch",
 		Short:  "DevPod Pro Provider watch commands",

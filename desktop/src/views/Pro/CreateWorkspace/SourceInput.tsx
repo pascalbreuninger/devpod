@@ -259,7 +259,7 @@ export function SourceInput() {
   ])
 
   return (
-    <InputGroup zIndex="popover">
+    <InputGroup zIndex="docked">
       <InputLeftAddon padding="0" h="10">
         <Select
           {...register(FieldName.SOURCE_TYPE, { onChange: () => validate(FieldName.SOURCE) })}

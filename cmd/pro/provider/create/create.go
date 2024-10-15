@@ -1,4 +1,4 @@
-package list
+package create
 
 import (
 	"github.com/loft-sh/devpod/cmd/pro/flags"
@@ -8,15 +8,13 @@ import (
 // NewCmd creates a new cobra command
 func NewCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	c := &cobra.Command{
-		Use:    "list",
-		Short:  "DevPod Pro Provider list commands",
+		Use:    "create",
+		Short:  "DevPod Pro Provider create commands",
 		Args:   cobra.NoArgs,
 		Hidden: true,
 	}
 
-	c.AddCommand(NewWorkspacesCmd(globalFlags))
-	c.AddCommand(NewProjectsCmd(globalFlags))
-	c.AddCommand(NewTemplatesCmd(globalFlags))
+	c.AddCommand(NewWorkspaceCmd(globalFlags))
 
 	return c
 }

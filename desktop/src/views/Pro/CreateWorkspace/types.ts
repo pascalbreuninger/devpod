@@ -17,7 +17,13 @@ export type TFormValues = {
   [FieldName.NAME]: string
   [FieldName.DEVCONTAINER_JSON]: string
   [FieldName.DEVCONTAINER_TYPE]: TDevContainerType
-  [FieldName.OPTIONS]: Record<string, unknown>
+  [FieldName.OPTIONS]: TOptions
+}
+
+type TOptions = {
+  workspaceTemplate: string
+  workspaceTemplateVersion?: string
+  [key: string]: string | Record<string, unknown> | undefined
 }
 
 export type TDevContainerType = "path" | "external"

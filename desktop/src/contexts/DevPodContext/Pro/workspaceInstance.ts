@@ -1,6 +1,7 @@
 import { TIdentifiable } from "@/types"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import { Labels } from "@/lib"
+import { Resources } from "@loft-enterprise/client"
 
 export class ProWorkspaceInstance
   extends ManagementV1DevPodWorkspaceInstance
@@ -19,8 +20,9 @@ export class ProWorkspaceInstance
 
   constructor(instance: ManagementV1DevPodWorkspaceInstance) {
     super()
-    this.apiVersion = instance.apiVersion
-    this.kind = instance.kind
+
+    this.apiVersion = `${Resources.ManagementV1DevPodWorkspaceInstance.group}/${Resources.ManagementV1DevPodWorkspaceInstance.version}`
+    this.kind = Resources.ManagementV1DevPodWorkspaceInstance.kind
     this.metadata = instance.metadata
     this.spec = instance.spec
     this.status = instance.status

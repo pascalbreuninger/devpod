@@ -108,4 +108,35 @@ export class ProClient implements TDebuggable {
       return Return.Failed("failed to get project templates")
     }
   }
+
+  public async createWorkspace(
+    instance: ManagementV1DevPodWorkspaceInstance
+  ): Promise<Result<ManagementV1DevPodWorkspaceInstance>> {
+    const res = await ProCommands.CreateWorkspace(this.id, instance).run()
+    if (res.err) {
+      return res
+    }
+
+    if (res.val.code !== 0) {
+      let reason = ""
+      if (res.val.stdout) {
+        reason = reason.concat(res.val.stdout)
+      }
+      if (res.val.stderr) {
+        reason = reason.concat(res.val.stderr)
+      }
+
+      return Return.Failed(reason)
+    }
+
+    try {
+      const instance = JSON.parse(res.val.stdout) as ManagementV1DevPodWorkspaceInstance
+
+      return Return.Value(instance)
+    } catch (err) {
+      console.error(err)
+
+      return Return.Failed("failed to create workspace")
+    }
+  }
 }

@@ -135,6 +135,10 @@ export class WorkspacesClient implements TDebuggable {
     return WorkspaceCommands.GetWorkspaceID(rawSource)
   }
 
+  public async newUID(): Promise<Result<string>> {
+    return WorkspaceCommands.GetWorkspaceUID()
+  }
+
   public async start(
     config: TWorkspaceStartConfig,
     listener: TStreamEventListenerFn | undefined,

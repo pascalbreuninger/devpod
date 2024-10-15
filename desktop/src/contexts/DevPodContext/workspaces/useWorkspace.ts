@@ -1,13 +1,7 @@
 import { useCallback, useId, useMemo, useRef, useSyncExternalStore } from "react"
 import { TStreamEventListenerFn, client } from "../../../client"
 import { exists } from "../../../lib"
-import {
-  TDeepNonNullable,
-  TIdentifiable,
-  TStreamID,
-  TWorkspaceID,
-  TWorkspaceStartConfig,
-} from "../../../types"
+import { TIdentifiable, TStreamID, TWorkspaceID, TWorkspaceStartConfig } from "../../../types"
 import { TActionID, TActionObj, useConnectAction, useReplayAction } from "../action"
 import { IWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 
@@ -24,7 +18,8 @@ export type TWorkspaceResult<T> = Readonly<{
   start: (config: TWorkspaceStartConfig, onStream?: TStreamEventListenerFn) => TActionID | undefined
   create: (
     config: Omit<TWorkspaceStartConfig, "sourceConfig"> &
-      Pick<TDeepNonNullable<TWorkspaceStartConfig>, "sourceConfig">,
+      Pick<TWorkspaceStartConfig, "sourceConfig"> &
+      Readonly<{ workspaceKey?: string }>,
     onStream?: TStreamEventListenerFn
   ) => TActionID
   stop: (onStream?: TStreamEventListenerFn) => TActionID | undefined
@@ -91,7 +86,7 @@ export function useWorkspace<TW extends TIdentifiable>(
     (config, onStream) => {
       return store.startAction({
         actionName: "start",
-        workspaceKey: config.id,
+        workspaceKey: config.workspaceKey ?? config.id,
         actionFn: async (ctx) => {
           const result = await client.workspaces.start(config, onStream, {
             id: config.id,

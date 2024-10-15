@@ -1,20 +1,17 @@
-import { getDisplayName } from "@/lib/pro"
-import { WorkspaceStatusBadge } from "@/views/Workspaces/WorkspaceStatusBadge"
-import { Box, Card, CardBody, CardHeader, HStack, Text } from "@chakra-ui/react"
-import { useCallback, useState } from "react"
-import { useNavigate } from "react-router"
-import { WorkspaceCardHeader } from "@/components"
 import { ProWorkspaceInstance, TActionID, useSettings, useWorkspace } from "@/contexts"
 import {
+  Annotations,
+  Source,
+  getDisplayName,
   useDeleteWorkspaceModal,
   useResetWorkspaceModal,
   useStopWorkspaceModal,
-  Annotations,
-  WorkspaceInstanceSource,
 } from "@/lib"
 import { Routes } from "@/routes"
-import { TWorkspace, TWorkspaceSource } from "@/types"
 import { useIDEs } from "@/useIDEs"
+import { Box, Card, CardBody, CardHeader, HStack, Heading, Text, VStack } from "@chakra-ui/react"
+import { ReactNode, useCallback, useState } from "react"
+import { useNavigate } from "react-router"
 
 type TWorkspaceInstanceCardProps = Readonly<{
   host: string
@@ -99,23 +96,16 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
   return (
     <>
       <Card direction="column" width="full" variant="outline" marginBottom="3" paddingLeft="2">
-        <CardHeader overflow="hidden" w="full">
-          <WorkspaceCardHeader
+        <CardHeader
+          overflow="hidden"
+          w="full"
+          cursor="pointer"
+          onClick={() => {
+            navigate(Routes.toProWorkspace(host, instance.id))
+          }}>
+          <ProWorkspaceCardHeader
             id={workspaceID!}
             source={<Text>{source?.gitRepository}</Text>}
-            statusBadge={
-              <WorkspaceStatusBadge
-                status={instance.status?.lastWorkspaceStatus as TWorkspace["status"]}
-                isLoading={isLoading}
-                // TODO: Implement
-                hasError={false}
-                // TODO: Implement
-                onClick={() => {
-                  console.warn("Not implemented")
-                }}
-              />
-            }
-            // TODO: Implement
             controls={null}
           />
         </CardHeader>
@@ -141,57 +131,38 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
   )
 }
 
-export enum ESourceType {
-  Git = "git",
-  Image = "image",
-  Local = "local",
-}
-export class Source {
-  readonly type: ESourceType
-  readonly value: string
+type TWorkspaceCardHeaderProps = Readonly<{
+  id: string
+  controls?: ReactNode
+  children?: ReactNode
+  source?: ReactNode
+}>
+function ProWorkspaceCardHeader({ id, controls, source, children }: TWorkspaceCardHeaderProps) {
+  return (
+    <>
+      <VStack align="start" spacing={0}>
+        <HStack w="full">
+          <Heading size="md">
+            <HStack alignItems="baseline" justifyContent="space-between">
+              <Text
+                as="label"
+                fontWeight="bold"
+                maxWidth="23rem"
+                overflow="hidden"
+                whiteSpace="nowrap"
+                textOverflow="ellipsis">
+                {id}
+              </Text>
+            </HStack>
+          </Heading>
+          <Box marginLeft="auto">{controls}</Box>
+        </HStack>
+        {source}
+      </VStack>
 
-  constructor(type?: ESourceType, value?: string) {
-    this.type = type ?? ESourceType.Git
-    this.value = value ?? ""
-  }
-
-  static fromRaw(rawSource?: string): Source {
-    if (rawSource?.startsWith(WorkspaceInstanceSource.prefixGit)) {
-      return new Source(ESourceType.Git, rawSource.replace(WorkspaceInstanceSource.prefixGit, ""))
-    }
-
-    if (rawSource?.startsWith(WorkspaceInstanceSource.prefixImage)) {
-      return new Source(
-        ESourceType.Image,
-        rawSource.replace(WorkspaceInstanceSource.prefixImage, "")
-      )
-    }
-
-    if (rawSource?.startsWith(WorkspaceInstanceSource.prefixLocal)) {
-      return new Source(
-        ESourceType.Local,
-        rawSource.replace(WorkspaceInstanceSource.prefixLocal, "")
-      )
-    }
-
-    return new Source()
-  }
-
-  public toWorkspaceSource(): TWorkspaceSource | undefined {
-    // TODO: Revers parse :sob:
-    //
-    return { gitRepository: "TODO: PLEASE IMPLEMENT ME" }
-  }
-
-  public stringify(): string {
-    const value = this.value.trim()
-    switch (this.type) {
-      case ESourceType.Git:
-        return `${WorkspaceInstanceSource.prefixGit}${value}`
-      case ESourceType.Image:
-        return `${WorkspaceInstanceSource.prefixImage}${value}`
-      case ESourceType.Local:
-        return `${WorkspaceInstanceSource.prefixLocal}${value}`
-    }
-  }
+      <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center" paddingLeft="8">
+        {children}
+      </HStack>
+    </>
+  )
 }

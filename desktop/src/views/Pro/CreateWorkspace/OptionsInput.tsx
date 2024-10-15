@@ -39,6 +39,7 @@ export function OptionsInput({
     [selectedTemplateName, templates]
   )
   const currentParameters = currentTemplate?.spec?.parameters
+  const currentTemplateVersions = currentTemplate?.spec?.versions
 
   return (
     <VStack
@@ -49,7 +50,7 @@ export function OptionsInput({
       borderRadius="md"
       borderWidth="thin"
       borderColor={borderColor}>
-      <FormControl>
+      <FormControl display="flex" gap="4">
         <OptionFormField
           id={`${FieldName.OPTIONS}.workspaceTemplate`}
           isRequired
@@ -61,6 +62,21 @@ export function OptionsInput({
             displayName: getDisplayName(template),
           }))}
         />
+        {currentTemplateVersions && currentTemplateVersions.length > 0 && (
+          <OptionFormField
+            id={`${FieldName.OPTIONS}.workspaceTemplateVersion`}
+            type="string"
+            defaultValue="latest"
+            displayName="Version"
+            enum={[
+              { value: "latest", displayName: "Latest" },
+              ...currentTemplateVersions.map((version) => ({
+                value: version.version,
+                displayName: version.version,
+              })),
+            ]}
+          />
+        )}
       </FormControl>
 
       {currentParameters && currentParameters.length > 0 && (

@@ -268,6 +268,9 @@ type ProxyCommands struct {
 
 	// Watch lists all entities associated with this provider and then watches for changes
 	Watch WatchProxyCommands `json:"watch,omitempty"`
+
+	// Create creates entities associated with this provider
+	Create CreateProxyCommands `json:"create,omitempty"`
 }
 
 type ListProxyCommands struct {
@@ -284,6 +287,11 @@ type ListProxyCommands struct {
 type WatchProxyCommands struct {
 	// Workspaces watches all workspaces and updates on changes
 	Workspaces types.StrArray `json:"workspaces,omitempty"`
+}
+
+type CreateProxyCommands struct {
+	// Workspace creates a workspace instance
+	Workspace types.StrArray `json:"workspace,omitempty"`
 }
 
 type SubOptions struct {

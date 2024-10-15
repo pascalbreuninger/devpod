@@ -20,6 +20,7 @@ import {
   DEVPOD_FLAG_WORKSPACE_UID,
 } from "../constants"
 import { TStreamEventListenerFn } from "../types"
+import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 
 export class ProCommands {
   static DEBUG = false
@@ -152,6 +153,14 @@ export class ProCommands {
     const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
     const projectFlag = toFlagArg(DEVPOD_FLAG_PROJECT, projectName)
     const args = [DEVPOD_COMMAND_PRO, "list-templates", hostFlag, projectFlag]
+
+    return ProCommands.newCommand(args)
+  }
+
+  static CreateWorkspace(id: TProID, instance: ManagementV1DevPodWorkspaceInstance) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const instanceFlag = toFlagArg("--instance", JSON.stringify(instance))
+    const args = [DEVPOD_COMMAND_PRO, "create-workspace", hostFlag, instanceFlag]
 
     return ProCommands.newCommand(args)
   }
