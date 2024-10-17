@@ -74,7 +74,7 @@ export function useAppReady() {
 
       if (event.type === "SetupPro") {
         // check if host is already taken. If not, set window to foreground and pass evnet to pro login handler
-        const proInstances = await client.pro.listAll()
+        const proInstances = await client.pro.listProInstances()
         if (proInstances.err) {
           return
         }

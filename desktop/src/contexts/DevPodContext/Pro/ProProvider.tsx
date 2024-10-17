@@ -7,34 +7,21 @@ import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV
 import { useQuery } from "@tanstack/react-query"
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useProInstances } from "../proInstances"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
-import { HostPicker } from "./HostPicker"
-import { ProjectPicker } from "./ProjectPicker"
-
-const HOST_OSS = "Open Source"
+import { ContextPicker, HOST_OSS } from "./ContextPicker"
 
 type TProContext = Readonly<{
   managementSelf: ManagementV1Self
   currentProject: ManagementV1Project
   host: string
   client: ProClient
+  isLoading: boolean
 }>
 const ProContext = createContext<TProContext>(null!)
 export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
+  const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
-  const [[proInstances]] = useProInstances()
-  const hosts = useMemo(() => {
-    const h =
-      proInstances
-        ?.map((instance) => instance.host)
-        .filter((instance): instance is string => !!instance)
-        .slice() ?? []
-    h.push(HOST_OSS)
-
-    return h
-  }, [proInstances])
   const client = useMemo(() => globalClient.getProClient(host), [host])
   const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
   const { data: managementSelf } = useQuery({
@@ -60,7 +47,10 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   }, [projects, selectedProject])
 
   useEffect(() => {
+    setIsLoading(true)
+
     return client.watchWorkspaces((workspaces) => {
+      setIsLoading(false)
       // sort by last activity (newest > oldest)
       const sorted = workspaces.slice().sort((a, b) => {
         const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
@@ -94,8 +84,8 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       return null!
     }
 
-    return { managementSelf, currentProject, host, client }
-  }, [currentProject, managementSelf, host, client])
+    return { managementSelf, currentProject, host, client, isLoading }
+  }, [currentProject, managementSelf, host, client, isLoading])
 
   // TODO: handle properly with loading indicator
   if (!managementSelf || !currentProject) {
@@ -104,17 +94,15 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
 
   return (
     <ProContext.Provider value={value}>
-      <ToolbarTitle>
-        <HostPicker currentHost={host} hosts={hosts} onChange={handleHostChanged} />
-      </ToolbarTitle>
+      <ToolbarTitle>{host}</ToolbarTitle>
       <ToolbarActions>
-        {projects && projects.length > 0 && (
-          <ProjectPicker
-            projects={projects}
-            currentProject={currentProject}
-            onChange={handleProjectChanged}
-          />
-        )}
+        <ContextPicker
+          currentHost={host}
+          onHostChange={handleHostChanged}
+          projects={projects ?? []}
+          currentProject={currentProject}
+          onProjectChange={handleProjectChanged}
+        />
       </ToolbarActions>
       {children}
     </ProContext.Provider>

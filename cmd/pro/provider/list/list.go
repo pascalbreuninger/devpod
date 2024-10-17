@@ -17,6 +17,7 @@ func NewCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	c.AddCommand(NewWorkspacesCmd(globalFlags))
 	c.AddCommand(NewProjectsCmd(globalFlags))
 	c.AddCommand(NewTemplatesCmd(globalFlags))
+	c.AddCommand(NewClustersCmd(globalFlags))
 
 	return c
 }

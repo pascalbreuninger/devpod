@@ -1,6 +1,7 @@
 import { WORKSPACE_STATUSES } from "@/constants"
 import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
-import { Pause, Stack3D, Status, Trash } from "@/icons"
+import { Pause, Stack3D, Trash, WorkspaceStatus } from "@/icons"
+import { ChevronDownIcon } from "@chakra-ui/icons"
 import {
   Box,
   Button,
@@ -33,7 +34,6 @@ import { Routes } from "../../routes"
 import { TProviderID, TWorkspace } from "../../types"
 import { WorkspaceCard } from "./WorkspaceCard"
 import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
-import { ChevronDownIcon } from "@chakra-ui/icons"
 
 const SORT_OPTIONS = [
   "Recently Used",
@@ -248,7 +248,7 @@ export function ListWorkspaces() {
               <MenuButton
                 as={Button}
                 variant="outline"
-                leftIcon={<Status boxSize={4} color="gray.600" />}>
+                leftIcon={<WorkspaceStatus boxSize={4} color="gray.600" />}>
                 Status ({getCurrentFilterCount(statusFilter, WORKSPACE_STATUSES.length)}/
                 {WORKSPACE_STATUSES.length})
               </MenuButton>
