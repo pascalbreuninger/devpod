@@ -62,6 +62,5 @@ export class ActionHistory {
     }
 
     window.localStorage.setItem(this.localStorageKey, JSON.stringify(this.history))
-    client.workspaces.syncActionLogs(this.history.map((a) => a.id))
   }
 }
