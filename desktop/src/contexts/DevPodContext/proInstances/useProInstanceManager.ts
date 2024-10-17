@@ -33,7 +33,7 @@ export function useProInstanceManager(): TProInstanceManager {
 
         return maybeProvider
       } catch (e) {
-        ;(await client.pro.remove(host)).unwrap()
+        ;(await client.pro.removeProInstance(host)).unwrap()
 
         throw e
       }
@@ -44,7 +44,7 @@ export function useProInstanceManager(): TProInstanceManager {
     },
   })
   const disconnectMutation = useMutation<undefined, Err<Failed>, TWithProID>({
-    mutationFn: async ({ id }) => (await client.pro.remove(id)).unwrap(),
+    mutationFn: async ({ id }) => (await client.pro.removeProInstance(id)).unwrap(),
     onSuccess: () => {
       queryClient.invalidateQueries(QueryKeys.PRO_INSTANCES)
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)

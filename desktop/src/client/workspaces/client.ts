@@ -288,10 +288,6 @@ export class WorkspacesClient implements TDebuggable {
     return cmdHandler?.cancel?.() ?? Return.Ok()
   }
 
-  public syncActionLogs(actionIDs: readonly string[]) {
-    invoke("sync_action_logs", { actions: actionIDs })
-  }
-
   public async getActionLogFile(actionID: TActionID): Promise<Result<string>> {
     try {
       const path = await invoke<string>("get_action_log_file", { actionId: actionID })

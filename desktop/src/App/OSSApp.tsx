@@ -122,6 +122,7 @@ export function OSSApp() {
                       </GridItem>
                       <GridItem display="flex" alignItems="center" justifyContent="center">
                         <Notifications
+                          getActionDestination={(action) => Routes.toAction(action.id)}
                           badgeNumber={providerUpdateCount}
                           providerUpdates={
                             providerUpdateInfo &&
