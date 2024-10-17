@@ -1,5 +1,3 @@
-import { getWorkspaceSourceName } from "@/lib"
-import { TWorkspaceSource } from "@/types"
 import { Box, Checkbox, HStack, Heading, Icon, Text, VStack } from "@chakra-ui/react"
 import dayjs from "dayjs"
 import { ReactNode, useId } from "react"

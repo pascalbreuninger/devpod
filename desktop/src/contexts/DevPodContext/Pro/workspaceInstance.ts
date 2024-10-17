@@ -1,12 +1,15 @@
-import { TIdentifiable } from "@/types"
+import { TIDE, TIdentifiable, TWorkspaceSource } from "@/types"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import { Labels } from "@/lib"
 import { Resources } from "@loft-enterprise/client"
+import { ManagementV1DevPodWorkspaceInstanceStatus } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstanceStatus"
 
 export class ProWorkspaceInstance
   extends ManagementV1DevPodWorkspaceInstance
   implements TIdentifiable
 {
+  public readonly status: ProWorkspaceInstanceStatus | undefined
+
   public get id(): string {
     const maybeID = this.metadata?.labels?.[Labels.WorkspaceID]
     if (!maybeID) {
@@ -25,6 +28,15 @@ export class ProWorkspaceInstance
     this.kind = Resources.ManagementV1DevPodWorkspaceInstance.kind
     this.metadata = instance.metadata
     this.spec = instance.spec
-    this.status = instance.status
+    this.status = instance.status as ProWorkspaceInstanceStatus
+  }
+}
+
+class ProWorkspaceInstanceStatus extends ManagementV1DevPodWorkspaceInstanceStatus {
+  "source"?: TWorkspaceSource
+  "ide"?: TIDE
+
+  constructor() {
+    super()
   }
 }

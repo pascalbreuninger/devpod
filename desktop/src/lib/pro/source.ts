@@ -1,4 +1,3 @@
-import { TWorkspaceSource } from "@/types"
 import { WorkspaceInstanceSource } from "./constants"
 import { TWorkspaceSourceType } from "@/types"
 
@@ -25,12 +24,6 @@ export class Source {
     }
 
     return new Source()
-  }
-
-  public toWorkspaceSource(): TWorkspaceSource | undefined {
-    // TODO: Revers parse :sob:
-    //
-    return { gitRepository: "TODO: PLEASE IMPLEMENT ME" }
   }
 
   public stringify(): string {
