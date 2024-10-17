@@ -38,6 +38,12 @@ export const QueryKeys = {
   proWorkspaceTemplates(host: string, project: string): string[] {
     return ["workspaceTemplates", host, project]
   },
+  proClusters(host: string, project: string): string[] {
+    return ["clusters", host, project]
+  },
+  connectionStatus(host: string): string[] {
+    return ["connectionStatus", host]
+  },
 }
 
 export const MutationKeys = {

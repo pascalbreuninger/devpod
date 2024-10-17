@@ -36,8 +36,9 @@ import { Ripple } from "../Animation"
 type TNotificationsProps = Readonly<{
   badgeNumber?: number
   providerUpdates?: ReactNode
+  icon?: ReactNode
 }>
-export function Notifications({ badgeNumber = 0, providerUpdates }: TNotificationsProps) {
+export function Notifications({ icon, badgeNumber = 0, providerUpdates }: TNotificationsProps) {
   const location = useLocation()
   const actions = useAllWorkspaceActions()
   const backgroundColor = useColorModeValue("white", "gray.900")
@@ -62,7 +63,7 @@ export function Notifications({ badgeNumber = 0, providerUpdates }: TNotificatio
             aria-label="Show onging operations"
             icon={
               <>
-                <Bell boxSize={6} position="absolute" />
+                {icon ? icon : <Bell boxSize={6} position="absolute" />}
                 {(pendingUpdate || badgeNumber !== 0) && (
                   <Badge
                     colorScheme="red"

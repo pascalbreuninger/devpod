@@ -6,6 +6,7 @@ import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
+import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
 import { ProWorkspaceInstance } from "@/contexts"
 
 export class ProClient implements TDebuggable {
@@ -23,11 +24,17 @@ export class ProClient implements TDebuggable {
     return ProCommands.Login(host, accessKey, listener)
   }
 
-  public async listAll(config?: TListProInstancesConfig): Promise<Result<readonly TProInstance[]>> {
+  public async checkHealth() {
+    return ProCommands.CheckHealth(this.id)
+  }
+
+  public async listProInstances(
+    config?: TListProInstancesConfig
+  ): Promise<Result<readonly TProInstance[]>> {
     return ProCommands.ListProInstances(config)
   }
 
-  public async remove(id: TProID) {
+  public async removeProInstance(id: TProID) {
     return ProCommands.RemoveProInstance(id)
   }
 
@@ -57,86 +64,28 @@ export class ProClient implements TDebuggable {
   }
 
   public async listProjects(): Promise<Result<readonly ManagementV1Project[]>> {
-    const res = await ProCommands.ListProjects(this.id).run()
-    if (res.err) {
-      return res
-    }
-
-    try {
-      const projects = JSON.parse(res.val.stdout) as readonly ManagementV1Project[]
-
-      return Return.Value(projects)
-    } catch (err) {
-      console.error(err)
-
-      return Return.Failed("failed to list projects")
-    }
+    return ProCommands.ListProjects(this.id)
   }
 
   public async getSelf(): Promise<Result<ManagementV1Self>> {
-    const res = await ProCommands.GetSelf(this.id).run()
-    if (res.err) {
-      return res
-    }
-
-    try {
-      const self = JSON.parse(res.val.stdout) as ManagementV1Self
-
-      return Return.Value(self)
-    } catch (err) {
-      console.error(err)
-
-      return Return.Failed("failed to list projects")
-    }
+    return ProCommands.GetSelf(this.id)
   }
 
   public async getProjectTemplates(
     projectName: string
   ): Promise<Result<ManagementV1ProjectTemplates>> {
-    const res = await ProCommands.ListTemplates(this.id, projectName).run()
-    if (res.err) {
-      return res
-    }
+    return ProCommands.ListTemplates(this.id, projectName)
+  }
 
-    try {
-      const projectTemplates = JSON.parse(res.val.stdout) as ManagementV1ProjectTemplates
-
-      return Return.Value(projectTemplates)
-    } catch (err) {
-      console.error(err)
-
-      return Return.Failed("failed to get project templates")
-    }
+  public async getProjectClusters(
+    projectName: string
+  ): Promise<Result<ManagementV1ProjectClusters>> {
+    return ProCommands.ListClusters(this.id, projectName)
   }
 
   public async createWorkspace(
     instance: ManagementV1DevPodWorkspaceInstance
   ): Promise<Result<ManagementV1DevPodWorkspaceInstance>> {
-    const res = await ProCommands.CreateWorkspace(this.id, instance).run()
-    if (res.err) {
-      return res
-    }
-
-    if (res.val.code !== 0) {
-      let reason = ""
-      if (res.val.stdout) {
-        reason = reason.concat(res.val.stdout)
-      }
-      if (res.val.stderr) {
-        reason = reason.concat(res.val.stderr)
-      }
-
-      return Return.Failed(reason)
-    }
-
-    try {
-      const instance = JSON.parse(res.val.stdout) as ManagementV1DevPodWorkspaceInstance
-
-      return Return.Value(instance)
-    } catch (err) {
-      console.error(err)
-
-      return Return.Failed("failed to create workspace")
-    }
+    return ProCommands.CreateWorkspace(this.id, instance)
   }
 }

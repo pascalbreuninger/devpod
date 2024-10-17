@@ -260,6 +260,9 @@ type ProxyCommands struct {
 	// Status proxies the status command
 	Status types.StrArray `json:"status,omitempty"`
 
+	// Health checks the health of the platform
+	Health types.StrArray `json:"health,omitempty"`
+
 	// Self fetches self for this provider
 	Self types.StrArray `json:"self,omitempty"`
 
@@ -282,6 +285,9 @@ type ListProxyCommands struct {
 
 	// Templates lists all templates in a project
 	Templates types.StrArray `json:"templates,omitempty"`
+
+	// Clusters lists all clusters and runners in a project
+	Clusters types.StrArray `json:"clusters,omitempty"`
 }
 
 type WatchProxyCommands struct {

@@ -173,6 +173,8 @@ export type TWorkspaceSource = {
   gitRepository: TMaybe<string>
   gitBranch: TMaybe<string>
   gitCommit: TMaybe<string>
+  gitPRReference: TMaybe<string>
+  gitSubPath: TMaybe<string>
   localFolder: TMaybe<string>
   image: TMaybe<string>
 }
@@ -266,6 +268,10 @@ export type TCommunityProvider = Readonly<{
   repository: string
 }>
 //#endregion
+
+export type TPlatformHealthCheck = Readonly<{
+  healthy: TMaybe<boolean>
+}>
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {
   return typeof arg === "object" && arg !== null && "workspaceID" in arg

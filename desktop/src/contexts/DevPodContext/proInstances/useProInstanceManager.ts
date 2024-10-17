@@ -14,7 +14,7 @@ export function useProInstanceManager(): TProInstanceManager {
       ;(await client.pro.login(host, accessKey, streamListener)).unwrap()
 
       // if we don't have a provider name, check for the pro instance and then use it's provider name
-      const proInstances = (await client.pro.listAll()).unwrap()
+      const proInstances = (await client.pro.listProInstances()).unwrap()
       const maybeNewInstance = proInstances?.find((instance) => instance.host === host)
       let maybeProviderName = maybeNewInstance?.provider
 

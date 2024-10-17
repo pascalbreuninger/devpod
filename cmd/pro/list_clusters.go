@@ -15,8 +15,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ListTemplatesCmd holds the cmd flags
-type ListTemplatesCmd struct {
+// ListClustersCmd holds the cmd flags
+type ListClustersCmd struct {
 	*flags.GlobalFlags
 	Log log.Logger
 
@@ -24,15 +24,15 @@ type ListTemplatesCmd struct {
 	Project string
 }
 
-// NewListTemplatesCmd creates a new command
-func NewListTemplatesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &ListTemplatesCmd{
+// NewListClustersCmd creates a new command
+func NewListClustersCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &ListClustersCmd{
 		GlobalFlags: globalFlags,
 		Log:         log.GetInstance(),
 	}
 	c := &cobra.Command{
-		Use:    "list-templates",
-		Short:  "List templates",
+		Use:    "list-clusters",
+		Short:  "List clusters",
 		Hidden: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd.Context())
@@ -47,7 +47,7 @@ func NewListTemplatesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	return c
 }
 
-func (cmd *ListTemplatesCmd) Run(ctx context.Context) error {
+func (cmd *ListClustersCmd) Run(ctx context.Context) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (cmd *ListTemplatesCmd) Run(ctx context.Context) error {
 	}
 
 	if !provider.IsProxyProvider() {
-		return fmt.Errorf("only pro providers can list projects, provider \"%s\" is not a pro provider", provider.Name)
+		return fmt.Errorf("only pro providers can list clusters, provider \"%s\" is not a pro provider", provider.Name)
 	}
 
 	opts := devPodConfig.ProviderOptions(provider.Name)
@@ -67,11 +67,12 @@ func (cmd *ListTemplatesCmd) Run(ctx context.Context) error {
 
 	// ignore --debug because we tunnel json through stdio
 	cmd.Log.SetLevel(logrus.InfoLevel)
+
 	var buf bytes.Buffer
 	if err := clientimplementation.RunCommandWithBinaries(
 		ctx,
-		"listTemplates",
-		provider.Exec.Proxy.List.Templates,
+		"listClusters",
+		provider.Exec.Proxy.List.Clusters,
 		devPodConfig.DefaultContext,
 		nil,
 		nil,
@@ -82,10 +83,10 @@ func (cmd *ListTemplatesCmd) Run(ctx context.Context) error {
 		&buf,
 		nil,
 		cmd.Log); err != nil {
-		return fmt.Errorf("list templates with provider \"%s\": %w", provider.Name, err)
+		return fmt.Errorf("list clusters with provider \"%s\": %w", provider.Name, err)
 	}
 	if err != nil {
-		return fmt.Errorf("list templates: %w", err)
+		return fmt.Errorf("list clusters: %w", err)
 	}
 
 	fmt.Println(buf.String())
