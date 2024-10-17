@@ -228,7 +228,6 @@ export class ProCommands {
     const args = [DEVPOD_COMMAND_PRO, "check-health", hostFlag]
 
     const result = await ProCommands.newCommand(args).run()
-    console.log(result)
     if (result.err) {
       return result
     }

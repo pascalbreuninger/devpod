@@ -116,7 +116,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
     return true
   }, [workspaceActions])
 
-  const handleBadgeClicked = useMemo(() => {
+  const handleBadgeClicked = useCallback(() => {
     if (workspace.current !== undefined) {
       navigateToAction(workspace.current.id)
     }

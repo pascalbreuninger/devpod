@@ -94,7 +94,10 @@ function ProAppContent({ host }: TProAppContentProps) {
                     icon={<CogDuotone color={iconColor} />}
                   />
                 </Link>
-                <Notifications icon={<BellDuotone color={iconColor} />} />
+                <Notifications
+                  getActionDestination={(action) => Routes.toProWorkspace(host, action.targetID)}
+                  icon={<BellDuotone color={iconColor} position="absolute" />}
+                />
               </HStack>
             </HStack>
           </Toolbar>
@@ -120,16 +123,18 @@ function ProAppContent({ host }: TProAppContentProps) {
             <HStack>
               <StatusBar.Version />
               <StatusBar.DebugMenu />
-              <HStack gap="1">
-                <Box
-                  boxSize="2"
-                  bg={connectionStatus?.state === "connected" ? "green.400" : "red.400"}
-                  rounded="full"
-                />
-                <Text color="gray.600" textTransform="capitalize">
-                  {connectionStatus?.state}
-                </Text>
-              </HStack>
+              {!connectionStatus.isLoading && (
+                <HStack gap="1">
+                  <Box
+                    boxSize="2"
+                    bg={connectionStatus.state === "connected" ? "green.400" : "red.400"}
+                    rounded="full"
+                  />
+                  <Text color="gray.600" textTransform="capitalize">
+                    {connectionStatus.state}
+                  </Text>
+                </HStack>
+              )}
             </HStack>
           </StatusBar>
         </Box>
@@ -139,12 +144,13 @@ function ProAppContent({ host }: TProAppContentProps) {
 }
 
 type TConnectionStatus = Readonly<{
-  state: "connected" | "disconnected"
+  state?: "connected" | "disconnected"
+  isLoading: boolean
   details?: string
 }>
-export function useConnectionStatus(): TConnectionStatus | undefined {
+export function useConnectionStatus(): TConnectionStatus {
   const { host, client } = useProContext()
-  const { data: connection } = useQuery({
+  const { data: connection, isLoading } = useQuery({
     queryKey: QueryKeys.connectionStatus(host),
     queryFn: async () => {
       const res = await client.checkHealth()
@@ -162,5 +168,5 @@ export function useConnectionStatus(): TConnectionStatus | undefined {
     refetchInterval: 5_000,
   })
 
-  return connection
+  return { ...connection, isLoading }
 }

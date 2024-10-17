@@ -24,21 +24,26 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { ReactNode, useMemo } from "react"
-import { Link as RouterLink, useLocation } from "react-router-dom"
+import { JSX, ReactNode, useMemo } from "react"
+import { Link as RouterLink, To, useLocation } from "react-router-dom"
 import { client } from "../../client"
-import { useAllWorkspaceActions, useSettings } from "../../contexts"
+import { TActionObj, useAllWorkspaceActions, useSettings } from "../../contexts"
 import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
 import { getActionDisplayName, useUpdate } from "../../lib"
-import { Routes } from "../../routes"
 import { Ripple } from "../Animation"
 
 type TNotificationsProps = Readonly<{
   badgeNumber?: number
   providerUpdates?: ReactNode
-  icon?: ReactNode
+  icon?: JSX.Element
+  getActionDestination: (action: TActionObj) => To
 }>
-export function Notifications({ icon, badgeNumber = 0, providerUpdates }: TNotificationsProps) {
+export function Notifications({
+  icon,
+  badgeNumber = 0,
+  providerUpdates,
+  getActionDestination,
+}: TNotificationsProps) {
   const location = useLocation()
   const actions = useAllWorkspaceActions()
   const backgroundColor = useColorModeValue("white", "gray.900")
@@ -52,6 +57,8 @@ export function Notifications({ icon, badgeNumber = 0, providerUpdates }: TNotif
     return [...actions.active, ...actions.history]
   }, [actions.active, actions.history])
 
+  const maybeIconColor = useMemo(() => icon?.props.color, [icon])
+
   return (
     <Popover placement="bottom">
       <PopoverTrigger>
@@ -61,6 +68,7 @@ export function Notifications({ icon, badgeNumber = 0, providerUpdates }: TNotif
             size="md"
             rounded="full"
             aria-label="Show onging operations"
+            {...(maybeIconColor ? { color: maybeIconColor } : {})}
             icon={
               <>
                 {icon ? icon : <Bell boxSize={6} position="absolute" />}
@@ -158,7 +166,7 @@ export function Notifications({ icon, badgeNumber = 0, providerUpdates }: TNotif
                       <Text fontWeight="bold">
                         <LinkOverlay
                           as={RouterLink}
-                          to={Routes.toAction(action.id)}
+                          to={getActionDestination(action)}
                           state={{ origin: location.pathname }}
                           textTransform="capitalize">
                           {getActionDisplayName(action)}
