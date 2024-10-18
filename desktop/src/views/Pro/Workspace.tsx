@@ -21,6 +21,7 @@ import {
   ComponentWithAs,
   HStack,
   IconProps,
+  Spinner,
   Tab,
   TabList,
   TabPanel,
@@ -28,23 +29,26 @@ import {
   Tabs,
   Text,
   VStack,
+  useColorModeValue,
 } from "@chakra-ui/react"
+import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import dayjs from "dayjs"
 import { ReactElement, cloneElement, useCallback, useEffect, useMemo, useRef } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { BackToWorkspaces } from "./BackToWorkspaces"
-import { useProjectClusters } from "./CreateWorkspace/useRunners"
+import { CreateWorkspaceForm } from "./CreateWorkspace/CreateWorkspaceForm"
+import { useProjectClusters } from "./CreateWorkspace/useProjectClusters"
 import { useTemplates } from "./CreateWorkspace/useTemplates"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 
 const DETAILS_TABS = [
   { label: "Logs", component: Logs },
-  // { label: "Files", component: <Box w="full" h="full" opacity={0.3} bg="yellow" /> },
-  // { label: "Configuration", component: <Box w="full" h="full" opacity={0.3} bg="orange" /> },
-  // { label: "History", component: <Box w="full" h="full" opacity={0.3} bg="green" /> },
+  // { label: "Files", component: Logs },
+  { label: "Configuration", component: Configuration },
+  // { label: "History", component: Logs },
 ]
 export function Workspace() {
-  const { data: templates } = useTemplates()
+  const { data: templates, isLoading: isTemplatesLoading } = useTemplates()
   const { data: projectClusters } = useProjectClusters()
   const { host } = useProContext()
   const params = useParams()
@@ -52,6 +56,8 @@ export function Workspace() {
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
   const instanceDisplayName = getDisplayName(instance)
+  const headerBackgroundColor = useColorModeValue("white", "black")
+  const contentBackgroundColor = useColorModeValue("gray.50", "gray.800")
 
   const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
     useCallback(() => workspace.stop(), [workspace])
@@ -95,9 +101,9 @@ export function Workspace() {
         <BackToWorkspaces />
         <WarningMessageBox
           warning={
-            <Text>
+            <>
               Instance <b>{params.workspace}</b> not found
-            </Text>
+            </>
           }
         />
       </VStack>
@@ -120,8 +126,10 @@ export function Workspace() {
   return (
     <>
       <VStack align="start" width="full" height="full">
-        <BackToWorkspaces />
-        <VStack align="start" width="full" py="4">
+        <Box position="sticky" top="0">
+          <BackToWorkspaces />
+        </Box>
+        <VStack align="start" width="full" py="4" top="8">
           <Box w="full">
             <WorkspaceCardHeader instance={instance} showSource={false}>
               <WorkspaceCardHeader.Controls
@@ -154,17 +162,30 @@ export function Workspace() {
             )}
           </HStack>
         </VStack>
-        <Box width="full" height="full">
-          <Tabs isLazy w="full" h="full">
-            <TabList marginBottom="6">
+        <Box height="full">
+          <Tabs colorScheme="gray" isLazy w="full" h="full">
+            <TabList ml="-8" px="8" mb="0" bgColor={headerBackgroundColor} top="40">
               {DETAILS_TABS.map(({ label }) => (
-                <Tab key={label}>{label}</Tab>
+                <Tab fontWeight="semibold" key={label}>
+                  {label}
+                </Tab>
               ))}
             </TabList>
             <TabPanels>
               {DETAILS_TABS.map(({ label, component: Component }) => (
-                <TabPanel w="full" padding="0" key={label}>
-                  {<Component workspace={workspace} instance={instance} />}
+                <TabPanel
+                  width="100vw"
+                  ml="-8"
+                  px="8"
+                  pt="8"
+                  pb="0"
+                  key={label}
+                  bgColor={contentBackgroundColor}>
+                  {workspace.isLoading || isTemplatesLoading ? (
+                    <Spinner />
+                  ) : (
+                    <Component workspace={workspace} instance={instance} template={template} />
+                  )}
                 </TabPanel>
               ))}
             </TabPanels>
@@ -183,6 +204,7 @@ export function Workspace() {
 type TTabProps = Readonly<{
   workspace: TWorkspaceResult<ProWorkspaceInstance>
   instance: ProWorkspaceInstance
+  template: ManagementV1DevPodWorkspaceTemplate | undefined
 }>
 
 function Logs({ workspace, instance }: TTabProps) {
@@ -214,7 +236,23 @@ function Logs({ workspace, instance }: TTabProps) {
     workspace.history.replay(actionID, connectStream)
   }, [actions, clearTerminal, connectStream, workspace])
 
-  return <Box h="70vh">{terminal}</Box>
+  return (
+    <Box h="60vh" mb="14">
+      {terminal}
+    </Box>
+  )
+}
+
+function Configuration({ instance, template }: TTabProps) {
+  return (
+    <CreateWorkspaceForm
+      instance={instance}
+      template={template}
+      onSubmit={console.log}
+      onReset={console.log}
+      error={null}
+    />
+  )
 }
 
 type TWorkspaceInfoDetailProps = Readonly<{

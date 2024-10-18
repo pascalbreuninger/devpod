@@ -1,7 +1,9 @@
 import { ProWorkspaceInstance, useWorkspace } from "@/contexts"
 import { CogOutlined, Status } from "@/icons"
 import {
+  TParameterWithValue,
   getDisplayName,
+  getParametersWithValues,
   useDeleteWorkspaceModal,
   useRebuildWorkspaceModal,
   useResetWorkspaceModal,
@@ -12,24 +14,20 @@ import {
   Card,
   CardBody,
   CardHeader,
-  ComponentWithAs,
   Divider,
   HStack,
-  IconProps,
   Text,
-  VStack,
   useColorModeValue,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import { StorageV1AppParameter } from "@loft-enterprise/client/gen/models/storageV1AppParameter"
 import * as jsyaml from "js-yaml"
-import { ReactElement, ReactNode, cloneElement, useCallback, useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import { useNavigate } from "react-router"
 import { useTemplates } from "./CreateWorkspace/useTemplates"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceInfoDetail } from "./WorkspaceInfoDetail"
 
-type TParameterWithValue = StorageV1AppParameter & { value?: string | number | boolean }
 type TWorkspaceInstanceCardProps = Readonly<{
   host: string
   instanceName: string
@@ -75,37 +73,12 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
       return empty
     }
 
-    let rawParameters: StorageV1AppParameter[] | undefined = currentTemplate.spec?.parameters
-    if (instance.spec?.templateRef?.version) {
-      // find versioned parameters
-      rawParameters = currentTemplate.spec?.versions?.find(
-        (version) => version.version === instance.spec?.templateRef?.version
-      )?.parameters
-    } else if (currentTemplate.spec?.versions && currentTemplate.spec.versions.length > 0) {
-      // fall back to latest version
-      rawParameters = currentTemplate.spec.versions[0]?.parameters
-    }
-
-    if (!instance.spec?.parameters || !rawParameters) {
+    const parameters = getParametersWithValues(instance, currentTemplate)
+    if (!parameters) {
       return empty
     }
 
-    try {
-      const out = jsyaml.load(instance.spec.parameters) as Record<string, string | number | boolean>
-
-      const parameters = rawParameters.map((param) => {
-        const path = param.variable
-        if (path) {
-          return { ...param, value: out[path] }
-        }
-
-        return param
-      })
-
-      return { parameters, template: currentTemplate }
-    } catch (err) {
-      return empty
-    }
+    return { parameters, template: currentTemplate }
   }, [instance, templates])
 
   if (!instance) {
