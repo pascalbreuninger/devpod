@@ -5,14 +5,16 @@ import { getDisplayName } from "@/lib"
 import { Routes } from "@/routes"
 import {
   Button,
-  Card,
-  CardHeader,
   Container,
   HStack,
   Heading,
   Image,
   List,
   ListItem,
+  Table,
+  Tbody,
+  Td,
+  Tr,
   VStack,
 } from "@chakra-ui/react"
 import { getProjectNamespace } from "@loft-enterprise/client"
@@ -90,17 +92,18 @@ export function ListWorkspaces() {
           <Heading size="lg" fontWeight="thin">
             Team Workspaces
           </Heading>
-          <List w="full">
-            {projectInstances.others.map((instance) => (
-              <ListItem key={instance.id}>
-                <Card variant="outline">
-                  <CardHeader>{getDisplayName(instance)}</CardHeader>
-                </Card>
-              </ListItem>
-            ))}
-          </List>
+          <Table w="full" borderStyle="solid" borderWidth="thin" borderColor="gray.200">
+            <Tbody>
+              {projectInstances.others.map((instance) => (
+                <Tr key={instance.id}>
+                  <Td>{getDisplayName(instance)}</Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
         </>
       )}
+
       {!hasWorkspaces && !isLoading && (
         <Container maxW="container.lg" h="full">
           <VStack align="center" justify="center" w="full" h="full">

@@ -1,5 +1,4 @@
 import { client as globalClient } from "@/client"
-import { BottomActionBar, BottomActionBarError, Form } from "@/components"
 import {
   ProWorkspaceInstance,
   ProWorkspaceStore,
@@ -7,75 +6,29 @@ import {
   useWorkspace,
   useWorkspaceStore,
 } from "@/contexts"
-import {
-  Annotations,
-  Failed,
-  Labels,
-  Result,
-  Return,
-  Source,
-  exists,
-  safeMaxName,
-  useFormErrors,
-} from "@/lib"
+import { Annotations, Failed, Labels, Result, Return, Source, safeMaxName } from "@/lib"
 import { Routes } from "@/routes"
-import { useIDEs } from "@/useIDEs"
-import {
-  Box,
-  Button,
-  ButtonGroup,
-  FormControl,
-  FormErrorMessage,
-  FormHelperText,
-  FormLabel,
-  Grid,
-  HStack,
-  Heading,
-  Input,
-  Spinner,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Box, HStack, Heading, VStack } from "@chakra-ui/react"
 import { NewResource, Resources, getProjectNamespace } from "@loft-enterprise/client"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import * as jsyaml from "js-yaml"
-import { ReactNode, useEffect, useRef, useState } from "react"
-import { Controller, FormProvider, useForm } from "react-hook-form"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { BackToWorkspaces } from "../BackToWorkspaces"
-import { DevContainerInput } from "./DevContainerInput"
-import { IDEInput } from "./IDEInput"
-import { OptionsInput } from "./OptionsInput"
-import { SourceInput } from "./SourceInput"
-import { FieldName, TFormValues } from "./types"
-import { useTemplates } from "./useTemplates"
+import { CreateWorkspaceForm } from "./CreateWorkspaceForm"
+import { TFormValues } from "./types"
 
 export function CreateWorkspace() {
-  const navigate = useNavigate()
   const workspace = useWorkspace<ProWorkspaceInstance>(undefined)
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
-  const containerRef = useRef<HTMLDivElement>(null)
   const [globalError, setGlobalError] = useState<Failed | null>(null)
   const { host, currentProject, managementSelf, client } = useProContext()
-  const { ides, defaultIDE } = useIDEs()
-  const { data: templates, isLoading: isTemplatesLoading } = useTemplates()
-  const form = useForm<TFormValues>({ mode: "onChange" })
-  const { sourceError, defaultIDEError, nameError, devcontainerJSONError, optionsError } =
-    useFormErrors(Object.values(FieldName), form.formState)
+  const navigate = useNavigate()
 
   const handleReset = () => {
     setGlobalError(null)
     navigate(Routes.toProInstance(host))
   }
-
-  useEffect(() => {
-    if (!form.getFieldState(FieldName.DEFAULT_IDE).isDirty && defaultIDE && defaultIDE.name) {
-      form.setValue(FieldName.DEFAULT_IDE, defaultIDE.name, {
-        shouldDirty: true,
-        shouldTouch: true,
-      })
-    }
-  }, [defaultIDE, form])
 
   const handleSubmit = async (values: TFormValues) => {
     setGlobalError(null)
@@ -119,128 +72,8 @@ export function CreateWorkspace() {
           <Heading fontWeight="thin">Create Workspace</Heading>
         </HStack>
       </VStack>
-      <Form h="full" onSubmit={form.handleSubmit(handleSubmit)} onReset={handleReset}>
-        <FormProvider {...form}>
-          <VStack w="full" gap="8" ref={containerRef}>
-            <FormControl isRequired isInvalid={exists(sourceError)}>
-              <CreateWorkspaceRow label={<FormLabel>Source Code</FormLabel>}>
-                <SourceInput />
-
-                {exists(sourceError) && (
-                  <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
-                )}
-              </CreateWorkspaceRow>
-            </FormControl>
-
-            <FormControl isRequired isInvalid={exists(optionsError)}>
-              <CreateWorkspaceRow label={<FormLabel>Options</FormLabel>}>
-                <Controller
-                  control={form.control}
-                  name={FieldName.OPTIONS}
-                  render={() => {
-                    if (isTemplatesLoading) {
-                      return <Spinner />
-                    }
-
-                    return (
-                      <OptionsInput
-                        workspaceTemplates={templates!.workspace}
-                        defaultWorkspaceTemplate={templates!.default}
-                      />
-                    )
-                  }}
-                />
-
-                {exists(optionsError) && (
-                  <FormErrorMessage>{optionsError.message ?? "Error"}</FormErrorMessage>
-                )}
-              </CreateWorkspaceRow>
-            </FormControl>
-
-            <FormControl isInvalid={exists(defaultIDEError)}>
-              <CreateWorkspaceRow
-                label={
-                  <VStack align="start">
-                    <FormLabel>Default IDE</FormLabel>
-                    <FormHelperText>
-                      The default IDE to use when starting the workspace. This can be changed later.
-                    </FormHelperText>
-                  </VStack>
-                }>
-                <Controller
-                  name={FieldName.DEFAULT_IDE}
-                  control={form.control}
-                  render={({ field }) => (
-                    <IDEInput field={field} ides={ides} onClick={(name) => field.onChange(name)} />
-                  )}
-                />
-                {exists(defaultIDEError) && (
-                  <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
-                )}
-              </CreateWorkspaceRow>
-            </FormControl>
-
-            <FormControl isInvalid={exists(devcontainerJSONError)}>
-              <CreateWorkspaceRow
-                label={
-                  <VStack align="start">
-                    <FormLabel>Devcontainer.json</FormLabel>
-                    <FormHelperText>
-                      Set an external source or a relative path in the source code. Otherwise, we’ll
-                      look in the code repository.
-                    </FormHelperText>
-                  </VStack>
-                }>
-                <DevContainerInput environmentTemplates={templates?.environment ?? []} />
-
-                {exists(devcontainerJSONError) && (
-                  <FormErrorMessage>{devcontainerJSONError.message ?? "Error"}</FormErrorMessage>
-                )}
-              </CreateWorkspaceRow>
-            </FormControl>
-
-            <FormControl isInvalid={exists(nameError)}>
-              <CreateWorkspaceRow label={<Text>Workspace Name</Text>}>
-                <Input {...form.register(FieldName.NAME, { required: false })} />
-
-                {exists(nameError) && (
-                  <FormErrorMessage>{nameError.message ?? "Error"}</FormErrorMessage>
-                )}
-              </CreateWorkspaceRow>
-            </FormControl>
-
-            <BottomActionBar hasSidebar={false}>
-              <BottomActionBarError error={globalError} containerRef={containerRef} />
-              <ButtonGroup marginLeft="auto">
-                <Button type="reset">Cancel</Button>
-                <Button
-                  type="submit"
-                  isLoading={form.formState.isSubmitting}
-                  isDisabled={Object.keys(form.formState.errors).length > 0}>
-                  Create Workspace
-                </Button>
-              </ButtonGroup>
-            </BottomActionBar>
-          </VStack>
-        </FormProvider>
-      </Form>
+      <CreateWorkspaceForm onReset={handleReset} onSubmit={handleSubmit} error={globalError} />
     </Box>
-  )
-}
-type TCreateWorkspaceRowProps = Readonly<{
-  label: ReactNode
-  children: ReactNode
-}>
-function CreateWorkspaceRow({ label, children }: TCreateWorkspaceRowProps) {
-  return (
-    <Grid templateColumns="1fr 3fr" w="full">
-      <Box w="full" h="full" pr="10">
-        {label}
-      </Box>
-      <Box w="full" h="full">
-        {children}
-      </Box>
-    </Grid>
   )
 }
 
