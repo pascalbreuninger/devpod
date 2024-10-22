@@ -48,6 +48,7 @@ type SSHCmd struct {
 	AgentForwarding           bool
 	GPGAgentForwarding        bool
 	GitSSHSignatureForwarding bool
+	SyncFiles                 bool
 
 	StartServices bool
 
@@ -56,6 +57,9 @@ type SSHCmd struct {
 	Command string
 	User    string
 	WorkDir string
+
+	A bool
+	B bool
 }
 
 // NewSSHCmd creates a new ssh command
@@ -101,8 +105,13 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will act as intermediate proxy for a proxy provider")
 	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", true, "If true forward the local ssh keys to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
+	sshCmd.Flags().BoolVar(&cmd.SyncFiles, "sync-files", false, "If true setup file sync")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
+
+	// TODO: Remove again
+	sshCmd.Flags().BoolVar(&cmd.A, "a", false, "")
+	sshCmd.Flags().BoolVar(&cmd.B, "b", false, "")
 
 	return sshCmd
 }
@@ -410,6 +419,26 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 				return err
 			}
 		}
+	}
+
+	if cmd.SyncFiles && (cmd.A || cmd.B) {
+		if cmd.A {
+			log.Info("Forwarding A")
+			cmd.ForwardPorts = append(cmd.ForwardPorts, "127.0.0.1:12345:127.0.0.1:22000")
+			cmd.ReverseForwardPorts = append(cmd.ReverseForwardPorts, "127.0.0.1:22001:127.0.0.1:12346")
+		}
+		if cmd.B {
+			log.Info("Forwarding B")
+			cmd.ForwardPorts = append(cmd.ForwardPorts, "127.0.0.1:12346:127.0.0.1:22000")
+			cmd.ReverseForwardPorts = append(cmd.ReverseForwardPorts, "127.0.0.1:22001:127.0.0.1:12345")
+		}
+
+		go func() {
+			log.Fatal(cmd.forwardPorts(ctx, containerClient, log))
+		}()
+		go func() {
+			log.Fatal(cmd.reverseForwardPorts(ctx, containerClient, log))
+		}()
 	}
 
 	workdir := filepath.Join("/workspaces", workspaceName)

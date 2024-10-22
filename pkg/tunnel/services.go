@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -57,11 +56,12 @@ func RunInContainer(
 	configureGitSSHSignatureHelper := devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true"
 
 	return retry.OnError(wait.Backoff{
-		Steps:    math.MaxInt,
+		Steps:    1, // FIXME: math.MaxInt,
 		Duration: 500 * time.Millisecond,
 		Factor:   1,
 		Jitter:   0.1,
 	}, func(err error) bool {
+		log.Error(err)
 		// Always allow to retry. Potentially add exceptions in the future.
 		return true
 	}, func() error {

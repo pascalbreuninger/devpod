@@ -1,10 +1,6 @@
 {
-  "name": "My dev env",
+  "name": "TF",
   "build": {
-    "context": ".",
     "dockerfile": "./Dockerfile"
-  },
-  "features":{
-    "ghcr.io/devcontainers/features/github-cli:1": {}
   }
 }

@@ -121,18 +121,10 @@ func BuildRoot() *cobra.Command {
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
-	rootCmd.AddCommand(agent.NewAgentCmd(globalFlags))
-	rootCmd.AddCommand(provider.NewProviderCmd(globalFlags))
-	rootCmd.AddCommand(use.NewUseCmd(globalFlags))
-	rootCmd.AddCommand(helper.NewHelperCmd(globalFlags))
-	rootCmd.AddCommand(ide.NewIDECmd(globalFlags))
-	rootCmd.AddCommand(machine.NewMachineCmd(globalFlags))
-	rootCmd.AddCommand(context.NewContextCmd(globalFlags))
-	rootCmd.AddCommand(pro.NewProCmd(globalFlags, log2.Default))
+	// workspace commands
 	rootCmd.AddCommand(NewUpCmd(globalFlags))
 	rootCmd.AddCommand(NewDeleteCmd(globalFlags))
 	rootCmd.AddCommand(NewSSHCmd(globalFlags))
-	rootCmd.AddCommand(NewVersionCmd())
 	rootCmd.AddCommand(NewStopCmd(globalFlags))
 	rootCmd.AddCommand(NewListCmd(globalFlags))
 	rootCmd.AddCommand(NewStatusCmd(globalFlags))
@@ -141,6 +133,20 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewExportCmd(globalFlags))
 	rootCmd.AddCommand(NewImportCmd(globalFlags))
 	rootCmd.AddCommand(NewLogsCmd(globalFlags))
+	rootCmd.AddCommand(NewTransferCmd(globalFlags))
+
+	// CLI management commands
+	rootCmd.AddCommand(NewVersionCmd())
 	rootCmd.AddCommand(NewUpgradeCmd())
+
+	rootCmd.AddCommand(agent.NewAgentCmd(globalFlags))
+	rootCmd.AddCommand(provider.NewProviderCmd(globalFlags))
+	rootCmd.AddCommand(use.NewUseCmd(globalFlags))
+	rootCmd.AddCommand(helper.NewHelperCmd(globalFlags))
+	rootCmd.AddCommand(ide.NewIDECmd(globalFlags))
+	rootCmd.AddCommand(machine.NewMachineCmd(globalFlags))
+	rootCmd.AddCommand(context.NewContextCmd(globalFlags))
+	rootCmd.AddCommand(pro.NewProCmd(globalFlags, log2.Default))
+
 	return rootCmd
 }
