@@ -10,7 +10,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/pro"
+	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -51,7 +51,7 @@ func (cmd *WatchCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	provider, err := pro.ProviderFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
+	provider, err := platform.ProviderFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
 	if err != nil {
 		return fmt.Errorf("load provider: %w", err)
 	}

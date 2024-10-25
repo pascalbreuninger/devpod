@@ -1,4 +1,9 @@
 {
   "name": "Python 3",
-  "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3"
+  "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3",
+  "features": {
+    "ghcr.io/loft-sh/devcontainer-features/vcluster:1": {
+      "version": "latest"
+    }
+  }
 }

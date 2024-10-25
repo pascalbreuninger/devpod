@@ -1,4 +1,4 @@
-package loft
+package platform
 
 const (
 	WorkspaceIDEnv       = "WORKSPACE_ID"
@@ -6,6 +6,8 @@ const (
 	WorkspaceContextEnv  = "WORKSPACE_CONTEXT"
 	WorkspaceProviderEnv = "WORKSPACE_PROVIDER"
 	WorkspaceInstanceEnv = "WORKSPACE_INSTANCE"
+	WorkspacePictureEnv  = "WORKSPACE_PICTURE"
+	WorkspaceSourceEnv   = "WORKSPACE_SOURCE"
 
 	ConfigEnv  = "LOFT_CONFIG"
 	ProjectEnv = "LOFT_PROJECT"
@@ -15,4 +17,6 @@ const (
 	TemplateVersionOptionEnv = "LOFT_TEMPLATE_VERSION"
 
 	TimeoutEnv = "LOFT_TIMEOUT"
+
+	ProviderBinaryEnv = "PRO_PROVIDER"
 )

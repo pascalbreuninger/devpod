@@ -11,14 +11,6 @@ export interface Settings {
   zoom: Zoom
   transparency: boolean
   autoUpdate: boolean
-  experimental_multiDevcontainer: boolean
-  experimental_fleet: boolean
-  experimental_jupyterNotebooks: boolean
-  experimental_vscodeInsiders: boolean
-  experimental_cursor: boolean
-  experimental_devPodPro: boolean
-  experimental_devPodProDesktop: boolean
-  experimental_colorMode: ColorMode
   additionalCliFlags: string
   additionalEnvVars: string
   dotfilesUrl: string
@@ -26,4 +18,13 @@ export interface Settings {
   httpProxyUrl: string
   httpsProxyUrl: string
   noProxy: string
+  experimental_multiDevcontainer: boolean
+  experimental_fleet: boolean
+  experimental_jupyterNotebooks: boolean
+  experimental_vscodeInsiders: boolean
+  experimental_cursor: boolean
+  experimental_positron: boolean
+  experimental_devPodPro: boolean
+  experimental_devPodProDesktop: boolean
+  experimental_colorMode: ColorMode
 }

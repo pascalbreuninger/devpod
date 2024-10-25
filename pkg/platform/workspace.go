@@ -1,4 +1,4 @@
-package provider
+package platform
 
 import (
 	"context"
@@ -11,17 +11,48 @@ import (
 	"os"
 	"time"
 
+	"bytes"
+
 	"github.com/gorilla/websocket"
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/client"
-	"github.com/loft-sh/devpod/pkg/loft/project"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/platform/project"
+	"github.com/loft-sh/devpod/pkg/provider"
+	workspacepkg "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const ProviderBinaryEnv = "PRO_PROVIDER"
+func FindOrCreateWorkspace(ctx context.Context, devPodConfig *config.Config, providerName string, workspace *provider.Workspace, log log.Logger) error {
+	provider, err := workspacepkg.FindProvider(devPodConfig, providerName, log)
+	if err != nil {
+		return err
+	}
+
+	var errBuf bytes.Buffer
+	err = clientimplementation.RunCommandWithBinaries(
+		ctx,
+		"createWorkspace",
+		provider.Config.Exec.Proxy.Create.Workspace,
+		devPodConfig.DefaultContext,
+		workspace,
+		nil,
+		devPodConfig.ProviderOptions(providerName),
+		provider.Config,
+		nil,
+		nil,
+		nil,
+		&errBuf,
+		log)
+	if err != nil {
+		return fmt.Errorf("get workspace with provider \"%s\": %w %s", providerName, err, errBuf.String())
+	}
+
+	return fmt.Errorf("what")
+}
 
 type WorkspaceInfo struct {
 	ID          string
@@ -32,30 +63,49 @@ type WorkspaceInfo struct {
 func GetWorkspaceInfoFromEnv() (*WorkspaceInfo, error) {
 	workspaceInfo := &WorkspaceInfo{}
 	// get workspace id
-	workspaceID := os.Getenv(loft.WorkspaceIDEnv)
+	workspaceID := os.Getenv(WorkspaceIDEnv)
 	if workspaceID == "" {
-		return nil, fmt.Errorf("%s is missing in environment", loft.WorkspaceIDEnv)
+		return nil, fmt.Errorf("%s is missing in environment", WorkspaceIDEnv)
 	}
 	workspaceInfo.ID = workspaceID
 
 	// get workspace uid
-	workspaceUID := os.Getenv(loft.WorkspaceUIDEnv)
+	workspaceUID := os.Getenv(WorkspaceUIDEnv)
 	if workspaceUID == "" {
-		return nil, fmt.Errorf("%s is missing in environment", loft.WorkspaceUIDEnv)
+		return nil, fmt.Errorf("%s is missing in environment", WorkspaceUIDEnv)
 	}
 	workspaceInfo.UID = workspaceUID
 
 	// get project
-	projectName := os.Getenv(loft.ProjectEnv)
+	projectName := os.Getenv(ProjectEnv)
 	if projectName == "" {
-		return nil, fmt.Errorf("%s is missing in environment", loft.ProjectEnv)
+		return nil, fmt.Errorf("%s is missing in environment", ProjectEnv)
 	}
 	workspaceInfo.ProjectName = projectName
 
 	return workspaceInfo, nil
 }
 
-func FindWorkspace(ctx context.Context, baseClient client.Client, uid, projectName string) (*managementv1.DevPodWorkspaceInstance, error) {
+func FindWorkspace(ctx context.Context, baseClient client.Client, uid string) (*managementv1.DevPodWorkspaceInstance, error) {
+	// create client
+	managementClient, err := baseClient.Management()
+	if err != nil {
+		return nil, fmt.Errorf("create management client: %w", err)
+	}
+
+	// get workspace
+	workspaceList, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances("").List(ctx, metav1.ListOptions{
+		LabelSelector: storagev1.DevPodWorkspaceUIDLabel + "=" + uid,
+	})
+	if err != nil {
+		return nil, err
+	} else if len(workspaceList.Items) == 0 {
+		return nil, nil
+	}
+
+	return &workspaceList.Items[0], nil
+}
+func FindWorkspaceInProject(ctx context.Context, baseClient client.Client, uid, projectName string) (*managementv1.DevPodWorkspaceInstance, error) {
 	// create client
 	managementClient, err := baseClient.Management()
 	if err != nil {

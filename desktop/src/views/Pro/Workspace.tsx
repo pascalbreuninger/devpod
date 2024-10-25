@@ -43,12 +43,10 @@ import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 
 const DETAILS_TABS = [
   { label: "Logs", component: Logs },
-  // { label: "Files", component: Logs },
   { label: "Configuration", component: Configuration },
-  // { label: "History", component: Logs },
 ]
 export function Workspace() {
-  const { data: templates, isLoading: isTemplatesLoading } = useTemplates()
+  const { data: templates } = useTemplates()
   const { data: projectClusters } = useProjectClusters()
   const { host } = useProContext()
   const params = useParams()
@@ -181,11 +179,7 @@ export function Workspace() {
                   pb="0"
                   key={label}
                   bgColor={contentBackgroundColor}>
-                  {workspace.isLoading || isTemplatesLoading ? (
-                    <Spinner />
-                  ) : (
-                    <Component workspace={workspace} instance={instance} template={template} />
-                  )}
+                  <Component workspace={workspace} instance={instance} template={template} />
                 </TabPanel>
               ))}
             </TabPanels>

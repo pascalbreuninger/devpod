@@ -14,7 +14,7 @@ import (
 	informers "github.com/loft-sh/api/v4/pkg/informers/externalversions"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"

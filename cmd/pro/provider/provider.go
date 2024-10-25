@@ -7,8 +7,8 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/provider/create"
 	"github.com/loft-sh/devpod/cmd/pro/provider/list"
 	"github.com/loft-sh/devpod/cmd/pro/provider/watch"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/log"
 
 	"github.com/spf13/cobra"
@@ -23,7 +23,7 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Hidden: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if (globalFlags.Config == "" || globalFlags.Config == client.DefaultCacheConfig) && os.Getenv("LOFT_CONFIG") != "" {
-				globalFlags.Config = os.Getenv(loft.ConfigEnv)
+				globalFlags.Config = os.Getenv(platform.ConfigEnv)
 			}
 
 			log.Default.SetFormat(log.JSONFormat)

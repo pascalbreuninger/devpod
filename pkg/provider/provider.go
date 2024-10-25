@@ -266,6 +266,9 @@ type ProxyCommands struct {
 	// Self fetches self for this provider
 	Self types.StrArray `json:"self,omitempty"`
 
+	// Get gets entities associated with this provider
+	Get CreateProxyCommands `json:"get,omitempty"`
+
 	// List lists all entities associated with this provider
 	List ListProxyCommands `json:"list,omitempty"`
 

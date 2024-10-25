@@ -11,8 +11,8 @@ import (
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/log"
 
 	"github.com/blang/semver"
@@ -45,17 +45,17 @@ func NewTemplateOptionsVersionCmd(globalFlags *flags.GlobalFlags) *cobra.Command
 }
 
 func (cmd *TemplateOptionsVersionCmd) Run(ctx context.Context) error {
-	projectName := os.Getenv(loft.ProjectEnv)
+	projectName := os.Getenv(platform.ProjectEnv)
 	if projectName == "" {
-		return fmt.Errorf("%s environment variable is empty", loft.ProjectEnv)
+		return fmt.Errorf("%s environment variable is empty", platform.ProjectEnv)
 	}
-	templateName := os.Getenv(loft.TemplateOptionEnv)
+	templateName := os.Getenv(platform.TemplateOptionEnv)
 	if templateName == "" {
-		return fmt.Errorf("%s environment variable is empty", loft.TemplateOptionEnv)
+		return fmt.Errorf("%s environment variable is empty", platform.TemplateOptionEnv)
 	}
-	templateVersion := os.Getenv(loft.TemplateVersionOptionEnv)
+	templateVersion := os.Getenv(platform.TemplateVersionOptionEnv)
 	if templateName == "" {
-		return fmt.Errorf("%s environment variable is empty", loft.TemplateVersionOptionEnv)
+		return fmt.Errorf("%s environment variable is empty", platform.TemplateVersionOptionEnv)
 	}
 
 	baseClient, err := client.InitClientFromPath(ctx, cmd.Config)

@@ -22,8 +22,8 @@ import (
 	"github.com/loft-sh/api/v4/pkg/auth"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/loft-sh/devpod/pkg/loft/kube"
-	"github.com/loft-sh/devpod/pkg/loft/project"
+	"github.com/loft-sh/devpod/pkg/platform/kube"
+	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"

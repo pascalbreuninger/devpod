@@ -7,8 +7,8 @@ import (
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/loft/client"
-	"github.com/loft-sh/devpod/pkg/loft/project"
+	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

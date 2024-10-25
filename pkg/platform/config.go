@@ -1,4 +1,4 @@
-package loft
+package platform
 
 import (
 	"os"

@@ -9,9 +9,8 @@ import (
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	providercmd "github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/client"
-	"github.com/loft-sh/devpod/pkg/pro"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -222,7 +221,7 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 		return nil
 	}
 
-	version, err := loft.GetDevPodVersion(url)
+	version, err := platform.GetDevPodVersion(url)
 	if err != nil {
 		return fmt.Errorf("get version: %w", err)
 	}
@@ -232,7 +231,7 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 }
 
 func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, skipBrowserLogin, forceBrowser bool, log log.Logger) error {
-	configPath, err := pro.LoftConfigPath(devPodConfig, providerName)
+	configPath, err := platform.LoftConfigPath(devPodConfig, providerName)
 	if err != nil {
 		return err
 	}

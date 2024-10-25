@@ -1,4 +1,4 @@
-package pro
+package platform
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"

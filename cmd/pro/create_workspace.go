@@ -8,8 +8,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/pro"
+	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -53,7 +52,7 @@ func (cmd *CreateWorkspaceCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	provider, err := pro.ProviderFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
+	provider, err := platform.ProviderFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
 	if err != nil {
 		return fmt.Errorf("load provider: %w", err)
 	}
@@ -63,7 +62,7 @@ func (cmd *CreateWorkspaceCmd) Run(ctx context.Context) error {
 	}
 
 	opts := devPodConfig.ProviderOptions(provider.Name)
-	opts[loft.WorkspaceInstanceEnv] = config.OptionValue{Value: cmd.Instance}
+	opts[platform.WorkspaceInstanceEnv] = config.OptionValue{Value: cmd.Instance}
 
 	var buf bytes.Buffer
 	// ignore --debug because we tunnel json through stdio

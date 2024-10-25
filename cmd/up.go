@@ -30,8 +30,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/marimo"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
-	"github.com/loft-sh/devpod/pkg/loft"
 	open2 "github.com/loft-sh/devpod/pkg/open"
+	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -345,7 +345,7 @@ func (cmd *UpCmd) devPodUp(
 			return nil, err
 		}
 	case client2.ProxyClient:
-		result, err = cmd.devPodUpProxy(ctx, client, log)
+		result, err = cmd.devPodUpProxy(ctx, devPodConfig, client, log)
 		if err != nil {
 			return nil, err
 		}
@@ -364,6 +364,7 @@ func (cmd *UpCmd) devPodUp(
 
 func (cmd *UpCmd) devPodUpProxy(
 	ctx context.Context,
+	devPodConfig *config.Config,
 	client client2.ProxyClient,
 	log log.Logger,
 ) (*config2.Result, error) {
@@ -405,8 +406,15 @@ func (cmd *UpCmd) devPodUpProxy(
 			)
 		}
 
+		// create workspace
+		err := platform.FindOrCreateWorkspace(ctx, devPodConfig, client.Provider(), workspace, log)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
 		// run devpod up elsewhere
-		err := client.Up(ctx, client2.UpOptions{
+		err = client.Up(ctx, client2.UpOptions{
 			CLIOptions: baseOptions,
 			Debug:      cmd.Debug,
 
@@ -1190,7 +1198,7 @@ func checkProviderUpdate(devPodConfig *config.Config, proInstance *provider2.Pro
 	}
 
 	// compare versions
-	newVersion, err := loft.GetProInstanceDevPodVersion(proInstance)
+	newVersion, err := platform.GetProInstanceDevPodVersion(proInstance)
 	if err != nil {
 		return fmt.Errorf("version for pro instance %s: %w", proInstance.Host, err)
 	}
