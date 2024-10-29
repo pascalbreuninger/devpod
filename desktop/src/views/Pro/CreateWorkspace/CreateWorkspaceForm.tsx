@@ -1,5 +1,6 @@
 import { BottomActionBar, BottomActionBarError, Form } from "@/components"
 import { ProWorkspaceInstance } from "@/contexts"
+import { Code, Laptop, Parameters } from "@/icons"
 import {
   Annotations,
   Failed,
@@ -21,7 +22,6 @@ import {
   Grid,
   Input,
   Spinner,
-  Text,
   VStack,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
@@ -72,7 +72,13 @@ export function CreateWorkspaceForm({
       <FormProvider {...form}>
         <VStack w="full" gap="8" ref={containerRef}>
           <FormControl isDisabled={!!instance} isRequired isInvalid={exists(sourceError)}>
-            <CreateWorkspaceRow label={<FormLabel>Source Code</FormLabel>}>
+            <CreateWorkspaceRow
+              label={
+                <FormLabel>
+                  <Code boxSize={5} mr="1" />
+                  Source Code
+                </FormLabel>
+              }>
               <SourceInput />
 
               {exists(sourceError) && (
@@ -82,7 +88,13 @@ export function CreateWorkspaceForm({
           </FormControl>
 
           <FormControl isRequired isInvalid={exists(optionsError)}>
-            <CreateWorkspaceRow label={<FormLabel>Options</FormLabel>}>
+            <CreateWorkspaceRow
+              label={
+                <FormLabel>
+                  <Parameters boxSize={5} mr="1" />
+                  Parameters
+                </FormLabel>
+              }>
               <Controller
                 control={form.control}
                 name={FieldName.OPTIONS}
@@ -110,7 +122,10 @@ export function CreateWorkspaceForm({
             <CreateWorkspaceRow
               label={
                 <VStack align="start">
-                  <FormLabel>Default IDE</FormLabel>
+                  <FormLabel>
+                    <Laptop boxSize={5} mr="1" />
+                    Default IDE
+                  </FormLabel>
                   <FormHelperText>
                     The default IDE to use when starting the workspace. This can be changed later.
                   </FormHelperText>
@@ -133,7 +148,10 @@ export function CreateWorkspaceForm({
             <CreateWorkspaceRow
               label={
                 <VStack align="start">
-                  <FormLabel>Devcontainer.json</FormLabel>
+                  <FormLabel>
+                    <Laptop boxSize={5} mr="1" />
+                    Devcontainer.json
+                  </FormLabel>
                   <FormHelperText>
                     Set an external source or a relative path in the source code. Otherwise, we’ll
                     look in the code repository.
@@ -149,7 +167,13 @@ export function CreateWorkspaceForm({
           </FormControl>
 
           <FormControl isInvalid={exists(nameError)}>
-            <CreateWorkspaceRow label={<Text>Workspace Name</Text>}>
+            <CreateWorkspaceRow
+              label={
+                <FormLabel>
+                  <Laptop boxSize={5} mr="1" />
+                  Workspace Name
+                </FormLabel>
+              }>
               <Input {...form.register(FieldName.NAME, { required: false })} />
 
               {exists(nameError) && (

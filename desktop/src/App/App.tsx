@@ -12,6 +12,8 @@ import { Routes } from "../routes"
 import { OSSApp } from "./OSSApp"
 import { ProApp } from "./ProApp"
 import { usePreserveLocation } from "./usePreserveLocation"
+import { ErrorBoundary } from "react-error-boundary"
+import { ErrorMessageBox } from "@/components"
 
 export function App() {
   const routeMatchPro = useMatch(`${Routes.PRO}/*`)
@@ -24,16 +26,25 @@ export function App() {
     }
   }, [routeMatchPro])
 
-  return routeMatchPro == null ? (
-    <WorkspaceStoreProvider store={store!}>
-      <DevPodProvider>
-        <ProInstancesProvider>
-          <OSSApp />
-        </ProInstancesProvider>
-      </DevPodProvider>
-    </WorkspaceStoreProvider>
-  ) : (
-    <ProApp />
+  return (
+    <ErrorBoundary
+      fallbackRender={({ error }) => (
+        <ErrorMessageBox
+          error={error || new Error("Something went wrong. Please restart the application")}
+        />
+      )}>
+      {routeMatchPro == null ? (
+        <WorkspaceStoreProvider store={store!}>
+          <DevPodProvider>
+            <ProInstancesProvider>
+              <OSSApp />
+            </ProInstancesProvider>
+          </DevPodProvider>
+        </WorkspaceStoreProvider>
+      ) : (
+        <ProApp />
+      )}
+    </ErrorBoundary>
   )
 }
 

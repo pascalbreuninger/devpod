@@ -90,7 +90,7 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wr
 		return err
 	}
 
-	factory := informers.NewSharedInformerFactory(clientset, time.Second*30)
+	factory := informers.NewSharedInformerFactory(clientset, time.Second*10)
 	workspaceInformer := factory.Management().V1().DevPodWorkspaceInstances()
 	onChange := func() {
 		workspaces, err := workspaceInformer.Lister().List(labels.NewSelector())
@@ -146,6 +146,9 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wr
 	go func() {
 		factory.Start(stopCh)
 		factory.WaitForCacheSync(stopCh)
+
+		// Kick off initial message
+		onChange()
 	}()
 
 	<-stopCh

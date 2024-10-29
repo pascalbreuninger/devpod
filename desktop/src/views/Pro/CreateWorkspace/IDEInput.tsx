@@ -54,7 +54,7 @@ function IDECard({ name, isSelected, icon, onClick }: TIDECardProps) {
   }
 
   return (
-    <Tooltip label={name}>
+    <Tooltip label={name} openDelay={0} closeDelay={0}>
       <Card
         w={name === "None" ? "20" : "12"}
         h="12"

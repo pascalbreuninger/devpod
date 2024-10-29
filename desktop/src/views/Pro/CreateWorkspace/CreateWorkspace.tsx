@@ -110,6 +110,7 @@ async function buildWorkspaceInstance(
   const id = name
   const uid = uidRes.val
   const ns = getProjectNamespace(currentProject, projectNamespacePrefix)
+  console.log(ns)
 
   if (!instance.metadata) {
     instance.metadata = {}

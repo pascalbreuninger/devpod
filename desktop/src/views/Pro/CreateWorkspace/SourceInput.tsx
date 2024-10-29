@@ -25,6 +25,7 @@ import { FiFolder } from "react-icons/fi"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
 import { FieldName, TFormValues } from "./types"
+import debounce from "lodash.debounce"
 
 // WARN: Make sure these match the regexes in /pkg/git/git.go
 const GIT_REPOSITORY_PATTERN =
@@ -283,11 +284,15 @@ export function SourceInput() {
       <Input
         {...register(FieldName.SOURCE, {
           validate: (value, { sourceType }) => {
-            if (sourceType === "git") {
-              return GIT_REPOSITORY_REGEX.test(value)
-            }
+            return new Promise((res) => {
+              debounce(() => {
+                if (sourceType === "git") {
+                  return res(GIT_REPOSITORY_REGEX.test(value))
+                }
 
-            return true
+                return res(true)
+              }, 700)()
+            })
           },
         })}
         _invalid={{

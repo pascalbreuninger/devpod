@@ -1,17 +1,11 @@
-import {
-  Box,
-  Text,
-  Flex,
-  HStack,
-  IconButton,
-  Link,
-  useColorModeValue,
-  useToken,
-} from "@chakra-ui/react"
+import { QueryKeys } from "@/queryKeys"
+import { Box, HStack, Text, Link, useColorModeValue, IconButton } from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import { Outlet, Link as RouterLink } from "react-router-dom"
-import { useBorderColor } from "../Theme"
-import { Notifications, StatusBar, Toolbar } from "../components"
-import { STATUS_BAR_HEIGHT } from "../constants"
+import { Notifications, StatusBar, Toolbar, ProLayout } from "../components"
+import { BellDuotone, CogDuotone } from "@/icons"
+import { Routes } from "@/routes"
 import {
   ProInstancesProvider,
   ProProvider,
@@ -21,11 +15,6 @@ import {
   useProContext,
   useProHost,
 } from "../contexts"
-import { BellDuotone, CogDuotone } from "../icons"
-import { Routes } from "../routes"
-import { useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { QueryKeys } from "@/queryKeys"
 
 export function ProApp() {
   const host = useProHost()
@@ -50,96 +39,61 @@ export function ProApp() {
 
 type TProAppContentProps = Readonly<{ host: string }>
 function ProAppContent({ host }: TProAppContentProps) {
-  const contentBackgroundColor = useColorModeValue("white", "background.darkest")
-  const toolbarHeight = useToken("sizes", "10")
-  const borderColor = useBorderColor()
-  const iconColor = useColorModeValue("primary.600", "primary.400")
   const connectionStatus = useConnectionStatus()
+  const iconColor = useColorModeValue("primary.600", "primary.400")
 
   return (
-    <Flex width="100vw" maxWidth="100vw" overflow="hidden">
-      <Box width="full" height="full">
-        <Box
-          data-tauri-drag-region // keep!
-          backgroundColor={contentBackgroundColor}
-          position="relative"
-          width="full"
-          height="full"
-          overflowY="auto">
-          <Toolbar
-            backgroundColor={contentBackgroundColor}
-            height={toolbarHeight}
-            position="sticky"
-            width="full">
-            <HStack
-              justifyContent="space-between"
-              paddingLeft="24" // TODO: Check on other platforms
-              data-tauri-drag-region // keep!
-            >
-              <HStack gap="4">
-                <Box>
-                  <Toolbar.Title />
-                </Box>
-                <Box>
-                  <Toolbar.Actions />
-                </Box>
-              </HStack>
-              <HStack pr="2">
-                <Link as={RouterLink} to={Routes.toProSettings(host)}>
-                  <IconButton
-                    variant="ghost"
-                    size="md"
-                    rounded="full"
-                    aria-label="Go to settings"
-                    icon={<CogDuotone color={iconColor} />}
-                  />
-                </Link>
-                <Notifications
-                  getActionDestination={(action) => Routes.toProWorkspace(host, action.targetID)}
-                  icon={<BellDuotone color={iconColor} position="absolute" />}
+    <ProLayout
+      toolbarItems={
+        <>
+          <HStack gap="4">
+            <Box>
+              <Toolbar.Title />
+            </Box>
+            <Box>
+              <Toolbar.Actions />
+            </Box>
+          </HStack>
+          <HStack pr="2">
+            <Link as={RouterLink} to={Routes.toProSettings(host)}>
+              <IconButton
+                variant="ghost"
+                size="md"
+                rounded="full"
+                aria-label="Go to settings"
+                icon={<CogDuotone color={iconColor} />}
+              />
+            </Link>
+            <Notifications
+              getActionDestination={(action) => Routes.toProWorkspace(host, action.targetID)}
+              icon={<BellDuotone color={iconColor} position="absolute" />}
+            />
+          </HStack>
+        </>
+      }
+      statusBarItems={
+        <>
+          <HStack />
+          <HStack>
+            <StatusBar.Version />
+            <StatusBar.DebugMenu />
+            {!connectionStatus.isLoading && (
+              <HStack gap="1">
+                <Box
+                  boxSize="2"
+                  bg={connectionStatus.state === "connected" ? "green.400" : "red.400"}
+                  rounded="full"
                 />
+                <Text color="gray.600" textTransform="capitalize">
+                  {connectionStatus.state}
+                </Text>
               </HStack>
-            </HStack>
-          </Toolbar>
-          <Box
-            as="main"
-            paddingTop="8"
-            paddingBottom={STATUS_BAR_HEIGHT}
-            paddingX="8"
-            width="full"
-            height={`calc(100vh - ${toolbarHeight})`}
-            overflowY="auto">
-            <Outlet />
-          </Box>
-          <StatusBar
-            height={STATUS_BAR_HEIGHT}
-            position="fixed"
-            bottom="0"
-            width="full"
-            borderTopWidth="thin"
-            borderTopColor={borderColor}
-            backgroundColor={contentBackgroundColor}>
-            <HStack />
-            <HStack>
-              <StatusBar.Version />
-              <StatusBar.DebugMenu />
-              {!connectionStatus.isLoading && (
-                <HStack gap="1">
-                  <Box
-                    boxSize="2"
-                    bg={connectionStatus.state === "connected" ? "green.400" : "red.400"}
-                    rounded="full"
-                  />
-                  <Text color="gray.600" textTransform="capitalize">
-                    {connectionStatus.state}
-                  </Text>
-                </HStack>
-              )}
-            </HStack>
-          </StatusBar>
-        </Box>
-      </Box>
-    </Flex>
+            )}
+          </HStack>
+        </>
+      }>
+      <Outlet />
+    </ProLayout>
   )
 }
 

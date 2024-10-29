@@ -7,6 +7,14 @@ export type TStreamEventListenerFn = (event: TStreamEvent) => void
 export type TEventListener<TEventName extends string> = Parameters<
   EventEmitter<TEventName>["addListener"]
 >[1]
+type TStreamOptions = Readonly<{
+  ignoreStdoutError?: boolean
+  ignoreStderrError?: boolean
+}>
+const defaultStreamOptions: TStreamOptions = {
+  ignoreStdoutError: false,
+  ignoreStderrError: false,
+}
 
 export type TCommand<T> = {
   run(): Promise<Result<T>>
@@ -76,7 +84,15 @@ export class Command implements TCommand<ChildProcess> {
     }
   }
 
-  public async stream(listener: TStreamEventListenerFn): Promise<ResultError> {
+  public async stream(
+    listener: TStreamEventListenerFn,
+    streamOptions?: TStreamOptions
+  ): Promise<ResultError> {
+    let opts = defaultStreamOptions
+    if (streamOptions) {
+      opts = { ...defaultStreamOptions, ...streamOptions }
+    }
+
     try {
       this.childProcess = await this.sidecarCommand.spawn()
       if (this.cancelled) {
@@ -100,7 +116,9 @@ export class Command implements TCommand<ChildProcess> {
               listener({ type: "data", data })
             }
           } catch (error) {
-            console.error("Failed to parse stdout message ", message, error)
+            if (!opts.ignoreStdoutError) {
+              console.error("Failed to parse stdout message ", message, error)
+            }
           }
         }
         const stderrListener: TEventListener<"data"> = (message) => {
@@ -108,7 +126,9 @@ export class Command implements TCommand<ChildProcess> {
             const error = JSON.parse(message)
             listener({ type: "error", error })
           } catch (error) {
-            console.error("Failed to parse stderr message ", message, error)
+            if (!opts.ignoreStderrError) {
+              console.error("Failed to parse stderr message ", message, error)
+            }
           }
         }
 

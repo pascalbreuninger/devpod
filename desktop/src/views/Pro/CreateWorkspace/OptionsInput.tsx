@@ -1,5 +1,5 @@
 import { useBorderColor } from "@/Theme"
-import { exists, getDisplayName } from "@/lib"
+import { exists, getDisplayName, getParameters, sortByVersionDesc } from "@/lib"
 import { TProviderOption } from "@/types"
 import { TOptionWithID } from "@/views/Providers"
 import {
@@ -33,13 +33,21 @@ export function OptionsInput({
   const borderColor = useBorderColor()
 
   const defaultTemplate = defaultWorkspaceTemplate ?? templates[0]
-  const selectedTemplateName = watch(`${FieldName.OPTIONS}.workspaceTemplate`, defaultTemplate)
+  const selectedTemplateName = watch(
+    `${FieldName.OPTIONS}.workspaceTemplate`,
+    defaultTemplate?.metadata?.name
+  )
+  const selectedTemplateVersion = watch(`${FieldName.OPTIONS}.workspaceTemplateVersion`)
   const currentTemplate = useMemo(
     () => templates.find((template) => template.metadata?.name === selectedTemplateName),
     [selectedTemplateName, templates]
   )
-  const currentParameters = currentTemplate?.spec?.parameters
-  const currentTemplateVersions = currentTemplate?.spec?.versions
+  const currentParameters = useMemo(() => {
+    return getParameters(currentTemplate, selectedTemplateVersion)
+  }, [currentTemplate, selectedTemplateVersion])
+  const currentTemplateVersions = useMemo(() => {
+    return currentTemplate?.spec?.versions?.slice().sort(sortByVersionDesc)
+  }, [currentTemplate?.spec?.versions])
 
   return (
     <VStack

@@ -1,13 +1,13 @@
-import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
+import { ProWorkspaceInstance } from "@/contexts"
+import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
-import { Result, ResultError, Return } from "../../lib"
+import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
+import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
+import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
+import { Failed, Result, ResultError } from "../../lib"
 import { TImportWorkspaceConfig, TListProInstancesConfig, TProID, TProInstance } from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
-import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
-import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
-import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
-import { ProWorkspaceInstance } from "@/contexts"
 
 export class ProClient implements TDebuggable {
   constructor(private readonly id: string) {}
@@ -42,20 +42,35 @@ export class ProClient implements TDebuggable {
     return ProCommands.ImportWorkspace(config)
   }
 
-  public watchWorkspaces(listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void) {
+  public watchWorkspaces(
+    listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void,
+    errorListener?: (failed: Failed) => void
+  ) {
     const cmd = ProCommands.WatchWorkspaces(this.id)
 
     // kick off stream in the background
-    cmd.stream((event) => {
-      if (event.type === "data") {
-        // FIXME: types
-        const rawInstances = event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[]
-        const workspaceInstances = rawInstances.map(
-          (instance) => new ProWorkspaceInstance(instance)
-        )
-        listener(workspaceInstances)
-      }
-    })
+    cmd
+      .stream(
+        (event) => {
+          if (event.type === "data") {
+            // FIXME: types
+            const rawInstances =
+              event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[]
+            const workspaceInstances = rawInstances.map(
+              (instance) => new ProWorkspaceInstance(instance)
+            )
+            listener(workspaceInstances)
+
+            return
+          }
+        },
+        { ignoreStderrError: true }
+      )
+      .then((res) => {
+        if (res.err) {
+          errorListener?.(res.val)
+        }
+      })
 
     // Don't await here, we want to return the unsubscribe function
     return () => {

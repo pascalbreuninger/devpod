@@ -62,7 +62,7 @@ export function ListWorkspaces() {
   }, [currentProject, instances, managementSelf])
 
   const hasWorkspaces =
-    projectInstances.currentUser.length > 0 && projectInstances.others.length > 0
+    projectInstances.currentUser.length > 0 || projectInstances.others.length > 0
 
   return (
     <VStack align="start" gap="4" w="full" h="full">
@@ -78,9 +78,6 @@ export function ListWorkspaces() {
               Create Workspace
             </Button>
           </HStack>
-          <Heading size="lg" fontWeight="thin">
-            My Workspaces
-          </Heading>
           <List w="full" mb="4">
             {projectInstances.currentUser.map((instance) => (
               <ListItem key={instance.id}>
@@ -88,19 +85,6 @@ export function ListWorkspaces() {
               </ListItem>
             ))}
           </List>
-
-          <Heading size="lg" fontWeight="thin">
-            Team Workspaces
-          </Heading>
-          <Table w="full" borderStyle="solid" borderWidth="thin" borderColor="gray.200">
-            <Tbody>
-              {projectInstances.others.map((instance) => (
-                <Tr key={instance.id}>
-                  <Td>{getDisplayName(instance)}</Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
         </>
       )}
 

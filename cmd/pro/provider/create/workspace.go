@@ -56,16 +56,13 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 	if err != nil {
 		return err
 	}
-	cmd.Log.Info("Let's go")
 
 	var instance *managementv1.DevPodWorkspaceInstance
 	instanceEnv := os.Getenv(platform.WorkspaceInstanceEnv)
 	workspaceID := os.Getenv(platform.WorkspaceUIDEnv)
 	workspaceUID := os.Getenv(platform.WorkspaceIDEnv)
-	// TODO: continue here :)
-	cmd.Log.Info("workspaceID", workspaceID)
-	cmd.Log.Info("workspaceUID", workspaceUID)
 	if instanceEnv != "" {
+		instance = &managementv1.DevPodWorkspaceInstance{} // init pointer
 		err := json.Unmarshal([]byte(instanceEnv), instance)
 		if err != nil {
 			return fmt.Errorf("unmarshal workpace instance %s: %w", instanceEnv, err)
@@ -103,7 +100,7 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 	// we need to wait until instance is scheduled
 	err = wait.PollUntilContextTimeout(ctx, time.Second, 30*time.Second, true, func(ctx context.Context) (done bool, err error) {
 		updatedInstance, err = managementClient.Loft().ManagementV1().
-			DevPodWorkspaceInstances(project.ProjectNamespace(updatedInstance.GetNamespace())).
+			DevPodWorkspaceInstances(updatedInstance.GetNamespace()).
 			Get(ctx, updatedInstance.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return false, err

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -34,6 +35,17 @@ func NewCheckHealthCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Hidden: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd.Context())
+		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			root := cmd.Root()
+			if root == nil {
+				return
+			}
+			if root.Annotations == nil {
+				root.Annotations = map[string]string{}
+			}
+			// Don't print debug message
+			root.Annotations[agent.AgentExecutedAnnotation] = "true"
 		},
 	}
 
