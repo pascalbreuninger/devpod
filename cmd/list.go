@@ -54,7 +54,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	workspaces, err := workspace.List(devPodConfig, cmd.SkipPro, log.Default)
+	workspaces, err := workspace.List(ctx, devPodConfig, cmd.SkipPro, log.Default)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 				entry.IDE.Name,
 				time.Since(entry.LastUsedTimestamp.Time).Round(1 * time.Second).String(),
 				time.Since(entry.CreationTimestamp.Time).Round(1 * time.Second).String(),
-				fmt.Sprintf("%t", entry.Pro),
+				fmt.Sprintf("%t", entry.IsPro()),
 			})
 		}
 

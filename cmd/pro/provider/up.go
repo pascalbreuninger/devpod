@@ -6,8 +6,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/ghodss/yaml"
-
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
@@ -76,12 +74,6 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	out, _ := yaml.Marshal(instance)
-	fmt.Println(string(out))
-
-	return nil
-	// FIXME: How to change workspace options?
 
 	return cmd.up(ctx, instance, baseClient)
 }

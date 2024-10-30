@@ -110,7 +110,6 @@ async function buildWorkspaceInstance(
   const id = name
   const uid = uidRes.val
   const ns = getProjectNamespace(currentProject, projectNamespacePrefix)
-  console.log(ns)
 
   if (!instance.metadata) {
     instance.metadata = {}
@@ -141,7 +140,11 @@ async function buildWorkspaceInstance(
     name: template,
     version: templateVersion,
   }
-  instance.spec.parameters = jsyaml.dump(parameters)
+  try {
+    instance.spec.parameters = jsyaml.dump(parameters)
+  } catch (err) {
+    return Return.Failed(err as any)
+  }
 
   // Environment template
   if (values.devcontainerType === "external") {

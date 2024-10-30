@@ -11,48 +11,14 @@ import (
 	"os"
 	"time"
 
-	"bytes"
-
 	"github.com/gorilla/websocket"
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
-	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/project"
-	"github.com/loft-sh/devpod/pkg/provider"
-	workspacepkg "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func FindOrCreateWorkspace(ctx context.Context, devPodConfig *config.Config, providerName string, workspace *provider.Workspace, log log.Logger) error {
-	provider, err := workspacepkg.FindProvider(devPodConfig, providerName, log)
-	if err != nil {
-		return err
-	}
-
-	var errBuf bytes.Buffer
-	err = clientimplementation.RunCommandWithBinaries(
-		ctx,
-		"createWorkspace",
-		provider.Config.Exec.Proxy.Create.Workspace,
-		devPodConfig.DefaultContext,
-		workspace,
-		nil,
-		devPodConfig.ProviderOptions(providerName),
-		provider.Config,
-		nil,
-		nil,
-		nil,
-		&errBuf,
-		log)
-	if err != nil {
-		return fmt.Errorf("get workspace with provider \"%s\": %w %s", providerName, err, errBuf.String())
-	}
-
-	return fmt.Errorf("what")
-}
 
 type WorkspaceInfo struct {
 	ID          string

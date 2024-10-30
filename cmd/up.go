@@ -406,13 +406,6 @@ func (cmd *UpCmd) devPodUpProxy(
 			)
 		}
 
-		// create workspace
-		err := platform.FindOrCreateWorkspace(ctx, devPodConfig, client.Provider(), workspace, log)
-		if err != nil {
-			errChan <- err
-			return
-		}
-
 		// run devpod up elsewhere
 		err = client.Up(ctx, client2.UpOptions{
 			CLIOptions: baseOptions,

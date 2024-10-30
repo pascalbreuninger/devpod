@@ -1,4 +1,4 @@
-import { ProWorkspaceInstance, useWorkspace } from "@/contexts"
+import { ProWorkspaceInstance, useTemplates, useWorkspace } from "@/contexts"
 import { CogOutlined, Status } from "@/icons"
 import {
   TParameterWithValue,
@@ -20,11 +20,8 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
-import { StorageV1AppParameter } from "@loft-enterprise/client/gen/models/storageV1AppParameter"
-import * as jsyaml from "js-yaml"
 import { useCallback, useMemo } from "react"
 import { useNavigate } from "react-router"
-import { useTemplates } from "./CreateWorkspace/useTemplates"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceInfoDetail } from "./WorkspaceInfoDetail"
 

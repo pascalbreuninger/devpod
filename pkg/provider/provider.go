@@ -263,11 +263,11 @@ type ProxyCommands struct {
 	// Health checks the health of the platform
 	Health types.StrArray `json:"health,omitempty"`
 
-	// Self fetches self for this provider
-	Self types.StrArray `json:"self,omitempty"`
+	// Create creates entities associated with this provider
+	Create CreateProxyCommands `json:"create,omitempty"`
 
 	// Get gets entities associated with this provider
-	Get CreateProxyCommands `json:"get,omitempty"`
+	Get GetProxyCommands `json:"get,omitempty"`
 
 	// List lists all entities associated with this provider
 	List ListProxyCommands `json:"list,omitempty"`
@@ -275,8 +275,8 @@ type ProxyCommands struct {
 	// Watch lists all entities associated with this provider and then watches for changes
 	Watch WatchProxyCommands `json:"watch,omitempty"`
 
-	// Create creates entities associated with this provider
-	Create CreateProxyCommands `json:"create,omitempty"`
+	// Update updates entities associated with this provider
+	Update UpdateProxyCommands `json:"update,omitempty"`
 }
 
 type ListProxyCommands struct {
@@ -300,6 +300,19 @@ type WatchProxyCommands struct {
 
 type CreateProxyCommands struct {
 	// Workspace creates a workspace instance
+	Workspace types.StrArray `json:"workspace,omitempty"`
+}
+
+type GetProxyCommands struct {
+	// Workspace gets a workspace instance
+	Workspace types.StrArray `json:"workspace,omitempty"`
+
+	// Self gets self for this provider
+	Self types.StrArray `json:"self,omitempty"`
+}
+
+type UpdateProxyCommands struct {
+	// Workspace updates a workspace instance
 	Workspace types.StrArray `json:"workspace,omitempty"`
 }
 

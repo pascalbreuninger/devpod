@@ -12,13 +12,14 @@ import (
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/platform/labels"
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 )
 
-func List(devPodConfig *config.Config, skipPro bool, log log.Logger) ([]*providerpkg.Workspace, error) {
+func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log log.Logger) ([]*providerpkg.Workspace, error) {
 	// Set indexed by UID for deduplication
 	workspaces := map[string]*providerpkg.Workspace{}
 
@@ -31,11 +32,10 @@ func List(devPodConfig *config.Config, skipPro bool, log log.Logger) ([]*provide
 	proWorkspaces := []*providerpkg.Workspace{}
 	if !skipPro {
 		// list remote workspaces
-		proWorkspaces, err = listProWorkspaces(devPodConfig, log)
+		proWorkspaces, err = listProWorkspaces(ctx, devPodConfig, log)
 		if err != nil {
 			return nil, err
 		}
-
 	}
 	// merge remote into local, taking precedence if UID matches
 	for _, workspace := range append(localWorkspaces, proWorkspaces...) {
@@ -73,7 +73,7 @@ func listLocalWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provid
 			continue
 		}
 
-		if workspaceConfig.Pro {
+		if workspaceConfig.IsPro() {
 			continue
 		}
 
@@ -83,9 +83,7 @@ func listLocalWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provid
 	return retWorkspaces, nil
 }
 
-// TODO: Improve performance for remote workspaces
-// TODO: context for cancellation
-func listProWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*providerpkg.Workspace, error) {
+func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log.Logger) ([]*providerpkg.Workspace, error) {
 	retWorkspaces := []*providerpkg.Workspace{}
 	for provider, providerContextConfig := range devPodConfig.Current().Providers {
 		if !providerContextConfig.Initialized {
@@ -102,9 +100,10 @@ func listProWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider
 		}
 
 		opts := devPodConfig.ProviderOptions(provider)
+		opts[providerpkg.LOFT_FILTER_BY_OWNER] = config.OptionValue{Value: "true"}
 		var buf bytes.Buffer
 		if err := clientimplementation.RunCommandWithBinaries(
-			context.Background(),
+			ctx,
 			"listWorkspaces",
 			providerConfig.Exec.Proxy.List.Workspaces,
 			devPodConfig.DefaultContext,
@@ -121,36 +120,39 @@ func listProWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider
 			continue
 		}
 
-		workspaces := []managementv1.DevPodWorkspaceInstance{}
-		if err := json.Unmarshal(buf.Bytes(), &workspaces); err != nil {
+		instances := []managementv1.DevPodWorkspaceInstance{}
+		if err := json.Unmarshal(buf.Bytes(), &instances); err != nil {
 			log.ErrorStreamOnly().Errorf("unmarshal devpod workspace instances: %w", err)
 		}
 
-		for _, proWorkspace := range workspaces {
-			if proWorkspace.GetLabels() == nil {
-				log.Debugf("no labels for pro workspace \"%s\" found, skipping", proWorkspace.GetName())
+		for _, instance := range instances {
+			if instance.GetLabels() == nil {
+				log.Debugf("no labels for pro workspace \"%s\" found, skipping", instance.GetName())
 				continue
 			}
 
 			// id
-			id := proWorkspace.GetLabels()[storagev1.DevPodWorkspaceIDLabel]
+			id := instance.GetLabels()[storagev1.DevPodWorkspaceIDLabel]
 			if id == "" {
-				log.Debugf("no ID label for pro workspace \"%s\" found, skipping", proWorkspace.GetName())
+				log.Debugf("no ID label for pro workspace \"%s\" found, skipping", instance.GetName())
 				continue
 			}
 
 			// uid
-			uid := proWorkspace.GetLabels()[storagev1.DevPodWorkspaceUIDLabel]
+			uid := instance.GetLabels()[storagev1.DevPodWorkspaceUIDLabel]
 			if uid == "" {
-				log.Debugf("no UID label for pro workspace \"%s\" found, skipping", proWorkspace.GetName())
+				log.Debugf("no UID label for pro workspace \"%s\" found, skipping", instance.GetName())
 				continue
 			}
 
+			// project
+			projectName := instance.GetLabels()[labels.ProjectLabel]
+
 			// source
 			source := providerpkg.WorkspaceSource{}
-			if proWorkspace.Annotations != nil && proWorkspace.Annotations[storagev1.DevPodWorkspaceSourceAnnotation] != "" {
+			if instance.Annotations != nil && instance.Annotations[storagev1.DevPodWorkspaceSourceAnnotation] != "" {
 				// source to workspace config source
-				rawSource := proWorkspace.Annotations[storagev1.DevPodWorkspaceSourceAnnotation]
+				rawSource := instance.Annotations[storagev1.DevPodWorkspaceSourceAnnotation]
 				s := providerpkg.ParseWorkspaceSource(rawSource)
 				if s == nil {
 					log.ErrorStreamOnly().Warnf("unable to parse workspace source \"%s\": %v", rawSource, err)
@@ -161,15 +163,15 @@ func listProWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider
 
 			// last used timestamp
 			lastUsedTimestamp := types.Time{}
-			sleepModeConfig := proWorkspace.Status.SleepModeConfig
+			sleepModeConfig := instance.Status.SleepModeConfig
 			if sleepModeConfig != nil {
 				lastUsedTimestamp = types.Unix(sleepModeConfig.Status.LastActivity, 0)
 			}
 
 			// creation timestamp
 			creationTimestamp := types.Time{}
-			if !proWorkspace.CreationTimestamp.IsZero() {
-				creationTimestamp = types.NewTime(proWorkspace.CreationTimestamp.Time)
+			if !instance.CreationTimestamp.IsZero() {
+				creationTimestamp = types.NewTime(instance.CreationTimestamp.Time)
 			}
 
 			workspace := providerpkg.Workspace{
@@ -182,7 +184,9 @@ func listProWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider
 				},
 				LastUsedTimestamp: lastUsedTimestamp,
 				CreationTimestamp: creationTimestamp,
-				Pro:               true,
+				Pro: &providerpkg.ProMetadata{
+					Project: projectName,
+				},
 			}
 			retWorkspaces = append(retWorkspaces, &workspace)
 		}

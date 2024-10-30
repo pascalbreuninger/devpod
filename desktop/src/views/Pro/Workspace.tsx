@@ -1,5 +1,11 @@
 import { WarningMessageBox, useStreamingTerminal } from "@/components"
-import { ProWorkspaceInstance, useProContext, useWorkspace } from "@/contexts"
+import {
+  ProWorkspaceInstance,
+  useProContext,
+  useProjectClusters,
+  useTemplates,
+  useWorkspace,
+} from "@/contexts"
 import {
   TWorkspaceResult,
   useWorkspaceActions,
@@ -21,7 +27,6 @@ import {
   ComponentWithAs,
   HStack,
   IconProps,
-  Spinner,
   Tab,
   TabList,
   TabPanel,
@@ -36,10 +41,8 @@ import dayjs from "dayjs"
 import { ReactElement, cloneElement, useCallback, useEffect, useMemo, useRef } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { BackToWorkspaces } from "./BackToWorkspaces"
-import { CreateWorkspaceForm } from "./CreateWorkspace/CreateWorkspaceForm"
-import { useProjectClusters } from "./CreateWorkspace/useProjectClusters"
-import { useTemplates } from "./CreateWorkspace/useTemplates"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
+import { UpdateWorkspace } from "./CreateWorkspace"
 
 const DETAILS_TABS = [
   { label: "Logs", component: Logs },
@@ -238,15 +241,7 @@ function Logs({ workspace, instance }: TTabProps) {
 }
 
 function Configuration({ instance, template }: TTabProps) {
-  return (
-    <CreateWorkspaceForm
-      instance={instance}
-      template={template}
-      onSubmit={console.log}
-      onReset={console.log}
-      error={null}
-    />
-  )
+  return <UpdateWorkspace instance={instance} template={template} />
 }
 
 type TWorkspaceInfoDetailProps = Readonly<{

@@ -103,4 +103,10 @@ export class ProClient implements TDebuggable {
   ): Promise<Result<ManagementV1DevPodWorkspaceInstance>> {
     return ProCommands.CreateWorkspace(this.id, instance)
   }
+
+  public async updateWorkspace(
+    instance: ManagementV1DevPodWorkspaceInstance
+  ): Promise<Result<ManagementV1DevPodWorkspaceInstance>> {
+    return ProCommands.UpdateWorkspace(this.id, instance)
+  }
 }

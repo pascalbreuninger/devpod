@@ -64,11 +64,15 @@ type Workspace struct {
 	// Origin is the place where this config file was loaded from
 	Origin string `json:"-"`
 
-	// Pro signals this workspace is remote and doesn't necessarily exist locally
-	Pro bool `json:"pro,omitempty"`
+	// Pro signals this workspace is remote and doesn't necessarily exist locally. It also has more metadata about the pro workspace
+	Pro *ProMetadata `json:"pro,omitempty"`
 
 	// Path to the file where the SSH config to access the workspace is stored
 	SSHConfigPath string `json:"sshConfigPath,omitempty"`
+}
+
+type ProMetadata struct {
+	Project string `json:"project,omitempty"`
 }
 
 type WorkspaceIDEConfig struct {
@@ -277,4 +281,8 @@ func ParseWorkspaceSource(source string) *WorkspaceSource {
 	}
 
 	return nil
+}
+
+func (w *Workspace) IsPro() bool {
+	return w.Pro != nil
 }

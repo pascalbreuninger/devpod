@@ -1,6 +1,6 @@
 import { TIDE, TIdentifiable, TWorkspaceSource } from "@/types"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
-import { Labels } from "@/lib"
+import { Labels, deepCopy } from "@/lib"
 import { Resources } from "@loft-enterprise/client"
 import { ManagementV1DevPodWorkspaceInstanceStatus } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstanceStatus"
 
@@ -26,9 +26,9 @@ export class ProWorkspaceInstance
 
     this.apiVersion = `${Resources.ManagementV1DevPodWorkspaceInstance.group}/${Resources.ManagementV1DevPodWorkspaceInstance.version}`
     this.kind = Resources.ManagementV1DevPodWorkspaceInstance.kind
-    this.metadata = instance.metadata
-    this.spec = instance.spec
-    this.status = instance.status as ProWorkspaceInstanceStatus
+    this.metadata = deepCopy(instance.metadata)
+    this.spec = deepCopy(instance.spec)
+    this.status = deepCopy(instance.status) as ProWorkspaceInstanceStatus
   }
 }
 

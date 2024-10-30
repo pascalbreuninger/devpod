@@ -67,7 +67,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// delete the provider
-	err = DeleteProvider(devPodConfig, provider, cmd.IgnoreNotFound)
+	err = DeleteProvider(ctx, devPodConfig, provider, cmd.IgnoreNotFound)
 	if err != nil {
 		return err
 	}
@@ -76,9 +76,9 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func DeleteProvider(devPodConfig *config.Config, provider string, ignoreNotFound bool) error {
+func DeleteProvider(ctx context.Context, devPodConfig *config.Config, provider string, ignoreNotFound bool) error {
 	// check if there are workspaces that still use this machine
-	workspaces, err := workspace.List(devPodConfig, false, log.Default)
+	workspaces, err := workspace.List(ctx, devPodConfig, false, log.Default)
 	if err != nil {
 		return err
 	}

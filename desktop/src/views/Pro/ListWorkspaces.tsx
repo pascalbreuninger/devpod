@@ -1,21 +1,19 @@
 import { ProWorkspaceInstance, useProContext, useWorkspaces } from "@/contexts"
 import { DevPodIcon } from "@/icons"
 import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
-import { getDisplayName } from "@/lib"
 import { Routes } from "@/routes"
 import {
   Button,
+  Center,
   Container,
   HStack,
   Heading,
   Image,
   List,
   ListItem,
-  Table,
-  Tbody,
-  Td,
-  Tr,
+  Spinner,
   VStack,
+  Text,
 } from "@chakra-ui/react"
 import { getProjectNamespace } from "@loft-enterprise/client"
 import { useMemo } from "react"
@@ -66,7 +64,7 @@ export function ListWorkspaces() {
 
   return (
     <VStack align="start" gap="4" w="full" h="full">
-      {hasWorkspaces && (
+      {hasWorkspaces ? (
         <>
           <HStack align="center" justify="space-between" mb="8" w="full">
             <Heading fontWeight="thin">Workspaces</Heading>
@@ -86,9 +84,12 @@ export function ListWorkspaces() {
             ))}
           </List>
         </>
-      )}
-
-      {!hasWorkspaces && !isLoading && (
+      ) : isLoading ? (
+        <Center w="full" h="60%" flexFlow="column nowrap">
+          <Spinner size="xl" thickness="4px" speed="1s" color="gray.600" />
+          <Text mt="4">Loading Workspaces...</Text>
+        </Center>
+      ) : (
         <Container maxW="container.lg" h="full">
           <VStack align="center" justify="center" w="full" h="full">
             <Heading fontWeight="thin" color="gray.600">

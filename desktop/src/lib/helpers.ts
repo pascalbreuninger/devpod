@@ -156,3 +156,11 @@ export function getWorkspaceSourceName({
 
   return ""
 }
+
+export function deepCopy<T>(obj: T): T | undefined {
+  if (obj === undefined) {
+    return undefined
+  }
+
+  return JSON.parse(JSON.stringify(obj))
+}

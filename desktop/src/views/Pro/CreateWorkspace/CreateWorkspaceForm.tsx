@@ -32,7 +32,7 @@ import { IDEInput } from "./IDEInput"
 import { OptionsInput } from "./OptionsInput"
 import { SourceInput } from "./SourceInput"
 import { FieldName, TFormValues } from "./types"
-import { useTemplates } from "./useTemplates"
+import { useTemplates } from "@/contexts"
 
 type TCreateWorkspaceFormProps = Readonly<{
   instance?: ProWorkspaceInstance

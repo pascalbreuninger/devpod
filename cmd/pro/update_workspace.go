@@ -14,23 +14,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// SelfCmd holds the cmd flags
-type SelfCmd struct {
+// UpdateWorkspaceCmd holds the cmd flags
+type UpdateWorkspaceCmd struct {
 	*flags.GlobalFlags
 	Log log.Logger
 
-	Host string
+	Host     string
+	Instance string
 }
 
-// NewSelfCmd creates a new command
-func NewSelfCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &SelfCmd{
+// NewListworkspacesCmd creates a new command
+func NewUpdateWorkspaceCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &UpdateWorkspaceCmd{
 		GlobalFlags: globalFlags,
 		Log:         log.GetInstance(),
 	}
 	c := &cobra.Command{
-		Use:    "self",
-		Short:  "Get self",
+		Use:    "update-workspace",
+		Short:  "Update workspace instance",
 		Hidden: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd.Context())
@@ -39,11 +40,13 @@ func NewSelfCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	c.Flags().StringVar(&cmd.Host, "host", "", "The pro instance to use")
 	_ = c.MarkFlagRequired("host")
+	c.Flags().StringVar(&cmd.Instance, "instance", "", "The workspace instance to update")
+	_ = c.MarkFlagRequired("instance")
 
 	return c
 }
 
-func (cmd *SelfCmd) Run(ctx context.Context) error {
+func (cmd *UpdateWorkspaceCmd) Run(ctx context.Context) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
@@ -55,8 +58,11 @@ func (cmd *SelfCmd) Run(ctx context.Context) error {
 	}
 
 	if !provider.IsProxyProvider() {
-		return fmt.Errorf("only pro providers can list projects, provider \"%s\" is not a pro provider", provider.Name)
+		return fmt.Errorf("only pro providers can update workspaces, provider \"%s\" is not a pro provider", provider.Name)
 	}
+
+	opts := devPodConfig.ProviderOptions(provider.Name)
+	opts[platform.WorkspaceInstanceEnv] = config.OptionValue{Value: cmd.Instance}
 
 	var buf bytes.Buffer
 	// ignore --debug because we tunnel json through stdio
@@ -64,22 +70,22 @@ func (cmd *SelfCmd) Run(ctx context.Context) error {
 
 	if err := clientimplementation.RunCommandWithBinaries(
 		ctx,
-		"getSelf",
-		provider.Exec.Proxy.Get.Self,
+		"updateWorkspace",
+		provider.Exec.Proxy.Update.Workspace,
 		devPodConfig.DefaultContext,
 		nil,
 		nil,
-		devPodConfig.ProviderOptions(provider.Name),
+		opts,
 		provider,
 		nil,
 		nil,
 		&buf,
-		nil,
+		cmd.Log.ErrorStreamOnly().Writer(logrus.ErrorLevel, true),
 		cmd.Log); err != nil {
-		return fmt.Errorf("watch workspaces with provider \"%s\": %w", provider.Name, err)
+		return fmt.Errorf("update workspace with provider \"%s\": %w", provider.Name, err)
 	}
 	if err != nil {
-		return fmt.Errorf("list projects: %w", err)
+		return fmt.Errorf("update workspace: %w", err)
 	}
 
 	fmt.Println(buf.String())

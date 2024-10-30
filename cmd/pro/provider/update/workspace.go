@@ -1,4 +1,4 @@
-package create
+package update
 
 import (
 	"context"
@@ -17,9 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/encoding"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
-	"github.com/loft-sh/devpod/pkg/platform/labels"
 	"github.com/loft-sh/devpod/pkg/platform/project"
-	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/terminal"
 	"github.com/spf13/cobra"
@@ -59,86 +57,67 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 		return err
 	}
 
-	// fully serialized intance, right now only used by GUI
+	var newInstance *managementv1.DevPodWorkspaceInstance
+	var oldInstance *managementv1.DevPodWorkspaceInstance
 	instanceEnv := os.Getenv(platform.WorkspaceInstanceEnv)
+	workspaceID := os.Getenv(platform.WorkspaceUIDEnv)
+	workspaceUID := os.Getenv(platform.WorkspaceIDEnv)
 	if instanceEnv != "" {
-		instance := &managementv1.DevPodWorkspaceInstance{} // init pointer
-		err := json.Unmarshal([]byte(instanceEnv), instance)
+		newInstance = &managementv1.DevPodWorkspaceInstance{}
+		err := json.Unmarshal([]byte(instanceEnv), newInstance)
 		if err != nil {
 			return fmt.Errorf("unmarshal workpace instance %s: %w", instanceEnv, err)
 		}
 
-		updatedInstance, err := waitForInstance(ctx, baseClient, instance, cmd.Log)
+		projectName := project.ProjectFromNamespace(newInstance.GetNamespace())
+		oldInstance, err = platform.FindWorkspaceByName(ctx, baseClient, newInstance.GetName(), projectName)
+		if err != nil {
+			return err
+		}
+	} else if workspaceUID != "" && workspaceID != "" {
+		oldInstance, err = platform.FindWorkspace(ctx, baseClient, workspaceUID)
 		if err != nil {
 			return err
 		}
 
-		out, err := json.Marshal(updatedInstance)
-		if err != nil {
-			return err
+		if oldInstance != nil && terminal.IsTerminalIn {
+			newInstance, err = createInstanceFromForm(ctx, baseClient, workspaceID, workspaceUID, cmd.Log)
+			if err != nil {
+				return err
+			}
 		}
-
-		fmt.Println(string(out))
-		return nil
 	}
 
-	// Info through env, right now only used by CLI
-	workspaceID := os.Getenv(provider.WORKSPACE_ID)
-	workspaceUID := os.Getenv(provider.WORKSPACE_UID)
-	workspaceFolder := os.Getenv(provider.WORKSPACE_FOLDER)
-	workspaceContext := os.Getenv(provider.WORKSPACE_CONTEXT)
-	if workspaceUID == "" || workspaceID == "" || workspaceFolder == "" {
-		return fmt.Errorf("workspaceID, workspaceUID or workspace folder not found: %s, %s, %s", workspaceID, workspaceUID, workspaceFolder)
-	}
-	instance, err := platform.FindWorkspace(ctx, baseClient, workspaceUID)
-	if err != nil {
-		return err
-	}
-	// Nothing left to do if we already have an instance
-	if instance != nil {
-		return nil
-	}
-	if !terminal.IsTerminalIn {
-		return fmt.Errorf("unable to create new instance through CLI if stdin is not a terminal")
+	if newInstance == nil || oldInstance == nil {
+		return fmt.Errorf("Need both new and old instance. new: %v\n old: %v", newInstance, oldInstance)
 	}
 
-	instance, err = createInstanceForm(ctx, baseClient, workspaceID, workspaceUID, cmd.Log)
+	managementClient, err := baseClient.Management()
 	if err != nil {
 		return err
 	}
 
-	_, err = waitForInstance(ctx, baseClient, instance, cmd.Log)
-	if err != nil {
-		return err
-	}
+	// TODO: Create path?
+	// retry?
 
-	// once we have the instance, update workspace and save config
-	// TODO: Do we need a file lock?
-	workspaceConfig, err := provider.LoadWorkspaceConfig(workspaceContext, workspaceID)
-	if err != nil {
-		return fmt.Errorf("load workspace config: %w", err)
-	}
-	workspaceConfig.Pro = &provider.ProMetadata{Project: project.ProjectFromNamespace(instance.GetNamespace())}
+	// patch := client.MergeFrom(oldOb)
+	// data, err := patch.Data(newObj)
+	// if err != nil {
+	// 	return err
+	// } else if len(data) == 0 || string(data) == "{}" {
+	// 	return nil
+	// }
+	// return kubeClient.Patch(ctx, newObj, client.RawPatch(patch.Type(), data), opts...)
+	// TODO: work with this
+	// managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(oldInstance.GetNamespace()).Patch()
+	// For now create patch, log as error
 
-	err = provider.SaveWorkspaceConfig(workspaceConfig)
-	if err != nil {
-		return fmt.Errorf("save workspace config: %w", err)
-	}
-
-	return nil
-}
-
-func waitForInstance(ctx context.Context, client client.Client, instance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
-	managementClient, err := client.Management()
-	if err != nil {
-		return nil, err
-	}
-
+	// up
 	updatedInstance, err := managementClient.Loft().ManagementV1().
-		DevPodWorkspaceInstances(instance.GetNamespace()).
-		Create(ctx, instance, metav1.CreateOptions{})
+		DevPodWorkspaceInstances(newInstance.GetNamespace()).
+		Create(ctx, newInstance, metav1.CreateOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("create workspace instance: %w", err)
+		return fmt.Errorf("create workspace instance: %w", err)
 	}
 
 	// we need to wait until instance is scheduled
@@ -153,27 +132,33 @@ func waitForInstance(ctx context.Context, client client.Client, instance *manage
 		status := updatedInstance.Status
 
 		if !isReady(updatedInstance) {
-			log.Debugf("Workspace %s is in phase %s, waiting until its ready", name, status.Phase)
+			cmd.Log.Debugf("Workspace %s is in phase %s, waiting until its ready", name, status.Phase)
 			return false, nil
 		}
 
 		if !isRunnerReady(updatedInstance, storagev1.BuiltinRunnerName) {
-			log.Debugf("Runner is not ready yet, waiting until its ready", name, status.Phase)
+			cmd.Log.Debugf("Runner is not ready yet, waiting until its ready", name, status.Phase)
 			return false, nil
 		}
 
-		log.Debugf("Workspace %s is ready", name)
+		cmd.Log.Debugf("Workspace %s is ready", name)
 		return true, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("wait for instance to get ready: %w", err)
+		return fmt.Errorf("wait for instance to get ready: %w", err)
 	}
 
-	return updatedInstance, nil
+	out, err := json.Marshal(updatedInstance)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(out))
+
+	return nil
 }
 
-func createInstanceForm(ctx context.Context, baseClient client.Client, id, uid string, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
-	log.Info("Starting Workspace form")
+func createInstanceFromForm(ctx context.Context, baseClient client.Client, id, uid string, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
 	projects, err := list.Projects(ctx, baseClient)
 	if err != nil {
 		return nil, err
@@ -279,7 +264,6 @@ func createInstanceForm(ctx context.Context, baseClient client.Client, id, uid s
 			Labels: map[string]string{
 				storagev1.DevPodWorkspaceIDLabel:  id,
 				storagev1.DevPodWorkspaceUIDLabel: uid,
-				labels.ProjectLabel:               selectedProject.GetName(),
 			},
 			Annotations: map[string]string{
 				storagev1.DevPodWorkspacePictureAnnotation: os.Getenv(platform.WorkspacePictureEnv),
@@ -306,6 +290,7 @@ func createInstanceForm(ctx context.Context, baseClient client.Client, id, uid s
 	}
 
 	if len(parameters) > 0 {
+		log.Info("parameters", parameters)
 		type FieldParameter struct {
 			storagev1.AppParameter
 

@@ -53,7 +53,6 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
 
     return client.watchWorkspaces(
       (workspaces) => {
-        setIsLoading(false)
         // sort by last activity (newest > oldest)
         const sorted = workspaces.slice().sort((a, b) => {
           const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
@@ -65,6 +64,10 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
           return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
         })
         store.setWorkspaces(sorted)
+        // dirty, dirty
+        setTimeout(() => {
+          setIsLoading(false)
+        }, 1_000)
       },
       (err) => {
         if (!err.message.startsWith("Command already cancelled")) {
@@ -150,7 +153,10 @@ function ConnectionErrorBox({ error, host, client }: TConnectionErrorBoxProps) {
         </Text>
         {isLoading ? <Spinner /> : <ErrorMessageBox error={new Error(data?.message)} />}
         <Link as={RouterLink} to={Routes.ROOT}>
-          Go to Home Screen
+          Go to home screen
+        </Link>
+        <Link as={RouterLink} to={Routes.toProInstance(host)}>
+          Reload
         </Link>
       </VStack>
     </ProLayout>

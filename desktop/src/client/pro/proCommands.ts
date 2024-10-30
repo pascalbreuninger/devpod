@@ -16,6 +16,7 @@ import {
   DEVPOD_FLAG_ACCESS_KEY,
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_HOST,
+  DEVPOD_FLAG_INSTANCE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_LOGIN,
@@ -209,8 +210,24 @@ export class ProCommands {
 
   static async CreateWorkspace(id: TProID, instance: ManagementV1DevPodWorkspaceInstance) {
     const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
-    const instanceFlag = toFlagArg("--instance", JSON.stringify(instance))
+    const instanceFlag = toFlagArg(DEVPOD_FLAG_INSTANCE, JSON.stringify(instance))
     const args = [DEVPOD_COMMAND_PRO, "create-workspace", hostFlag, instanceFlag]
+
+    const result = await ProCommands.newCommand(args).run()
+    if (result.err) {
+      return result
+    }
+    if (!isOk(result.val)) {
+      return getErrorFromChildProcess(result.val)
+    }
+
+    return Return.Value(JSON.parse(result.val.stdout) as ManagementV1DevPodWorkspaceInstance)
+  }
+
+  static async UpdateWorkspace(id: TProID, instance: ManagementV1DevPodWorkspaceInstance) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const instanceFlag = toFlagArg(DEVPOD_FLAG_INSTANCE, JSON.stringify(instance))
+    const args = [DEVPOD_COMMAND_PRO, "update-workspace", hostFlag, instanceFlag]
 
     const result = await ProCommands.newCommand(args).run()
     if (result.err) {

@@ -11,12 +11,10 @@ const (
 
 	ConfigEnv  = "LOFT_CONFIG"
 	ProjectEnv = "LOFT_PROJECT"
-	RunnerEnv  = "LOFT_RUNNER"
 
 	TemplateOptionEnv        = "LOFT_TEMPLATE"
 	TemplateVersionOptionEnv = "LOFT_TEMPLATE_VERSION"
 
-	TimeoutEnv = "LOFT_TIMEOUT"
-
+	TimeoutEnv        = "LOFT_TIMEOUT"
 	ProviderBinaryEnv = "PRO_PROVIDER"
 )
