@@ -71,7 +71,7 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context) error {
 		}
 
 		for _, instance := range workspaceList.Items {
-			if filterByOwner && isOwner(baseClient.Self(), instance) {
+			if filterByOwner && !isOwner(baseClient.Self(), instance) {
 				continue
 			}
 

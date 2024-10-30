@@ -51,14 +51,14 @@ func (cmd *SshCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, s
 	if err != nil {
 		return err
 	}
-	workspace, err := platform.FindWorkspaceInProject(ctx, baseClient, info.UID, info.ProjectName)
+	workspace, err := platform.FindInstanceInProject(ctx, baseClient, info.UID, info.ProjectName)
 	if err != nil {
 		return err
 	} else if workspace == nil {
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	conn, err := platform.DialWorkspace(baseClient, workspace, "ssh", platform.OptionsFromEnv(storagev1.DevPodFlagsSsh), cmd.Log)
+	conn, err := platform.DialInstance(baseClient, workspace, "ssh", platform.OptionsFromEnv(storagev1.DevPodFlagsSsh), cmd.Log)
 	if err != nil {
 		return err
 	}

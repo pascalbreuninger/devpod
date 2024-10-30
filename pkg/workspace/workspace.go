@@ -33,6 +33,7 @@ func Resolve(
 	desiredID,
 	desiredMachine string,
 	providerUserOptions []string,
+	reconfigureProvider bool,
 	devContainerImage string,
 	devContainerPath string,
 	sshConfigPath string,
@@ -103,26 +104,26 @@ func Resolve(
 	}
 
 	// create workspace client
-	var workspaceClient client.BaseWorkspaceClient
+	var client client.BaseWorkspaceClient
 	if provider.IsProxyProvider() {
-		workspaceClient, err = clientimplementation.NewProxyClient(devPodConfig, provider, workspace, log)
+		client, err = clientimplementation.NewProxyClient(devPodConfig, provider, workspace, log)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		workspaceClient, err = clientimplementation.NewWorkspaceClient(devPodConfig, provider, workspace, machine, log)
+		client, err = clientimplementation.NewWorkspaceClient(devPodConfig, provider, workspace, machine, log)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// refresh provider options
-	err = workspaceClient.RefreshOptions(ctx, providerUserOptions)
+	err = client.RefreshOptions(ctx, providerUserOptions, reconfigureProvider)
 	if err != nil {
 		return nil, err
 	}
 
-	return workspaceClient, nil
+	return client, nil
 }
 
 // Get tries to retrieve an already existing workspace
@@ -322,7 +323,7 @@ func createWorkspace(
 			}
 
 			// refresh options
-			err = machineClient.RefreshOptions(ctx, providerUserOptions)
+			err = machineClient.RefreshOptions(ctx, providerUserOptions, false)
 			if err != nil {
 				_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
 				return nil, nil, nil, err

@@ -52,7 +52,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer
 	if err != nil {
 		return err
 	}
-	workspace, err := platform.FindWorkspaceInProject(ctx, baseClient, info.UID, info.ProjectName)
+	workspace, err := platform.FindInstanceInProject(ctx, baseClient, info.UID, info.ProjectName)
 	if err != nil {
 		return err
 	} else if workspace == nil {
@@ -70,7 +70,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer
 		return nil
 	}
 
-	conn, err := platform.DialWorkspace(baseClient, workspace, "getstatus", platform.OptionsFromEnv(storagev1.DevPodFlagsStatus), cmd.Log)
+	conn, err := platform.DialInstance(baseClient, workspace, "getstatus", platform.OptionsFromEnv(storagev1.DevPodFlagsStatus), cmd.Log)
 	if err != nil {
 		return err
 	}

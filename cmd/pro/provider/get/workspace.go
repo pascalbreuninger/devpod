@@ -48,7 +48,7 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	instance, err := platform.FindWorkspaceInProject(ctx, baseClient, workspaceInfo.UID, workspaceInfo.ProjectName)
+	instance, err := platform.FindInstanceInProject(ctx, baseClient, workspaceInfo.UID, workspaceInfo.ProjectName)
 	if err != nil {
 		return err
 	}

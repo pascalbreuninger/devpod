@@ -50,7 +50,7 @@ func ResolveMachine(devPodConfig *config.Config, args []string, userOptions []st
 	}
 
 	// refresh options
-	err = machineClient.RefreshOptions(context.TODO(), userOptions)
+	err = machineClient.RefreshOptions(context.TODO(), userOptions, false)
 	if err != nil {
 		return nil, err
 	}

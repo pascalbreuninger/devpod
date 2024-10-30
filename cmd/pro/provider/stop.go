@@ -52,14 +52,14 @@ func (cmd *StopCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, 
 	if err != nil {
 		return err
 	}
-	workspace, err := platform.FindWorkspaceInProject(ctx, baseClient, info.UID, info.ProjectName)
+	workspace, err := platform.FindInstanceInProject(ctx, baseClient, info.UID, info.ProjectName)
 	if err != nil {
 		return err
 	} else if workspace == nil {
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	conn, err := platform.DialWorkspace(baseClient, workspace, "stop", platform.OptionsFromEnv(storagev1.DevPodFlagsStop), cmd.Log)
+	conn, err := platform.DialInstance(baseClient, workspace, "stop", platform.OptionsFromEnv(storagev1.DevPodFlagsStop), cmd.Log)
 	if err != nil {
 		return err
 	}

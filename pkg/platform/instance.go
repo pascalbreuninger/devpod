@@ -18,6 +18,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 type WorkspaceInfo struct {
@@ -52,7 +53,7 @@ func GetWorkspaceInfoFromEnv() (*WorkspaceInfo, error) {
 	return workspaceInfo, nil
 }
 
-func FindWorkspace(ctx context.Context, baseClient client.Client, uid string) (*managementv1.DevPodWorkspaceInstance, error) {
+func FindInstance(ctx context.Context, baseClient client.Client, uid string) (*managementv1.DevPodWorkspaceInstance, error) {
 	// create client
 	managementClient, err := baseClient.Management()
 	if err != nil {
@@ -71,7 +72,7 @@ func FindWorkspace(ctx context.Context, baseClient client.Client, uid string) (*
 
 	return &workspaceList.Items[0], nil
 }
-func FindWorkspaceInProject(ctx context.Context, baseClient client.Client, uid, projectName string) (*managementv1.DevPodWorkspaceInstance, error) {
+func FindInstanceInProject(ctx context.Context, baseClient client.Client, uid, projectName string) (*managementv1.DevPodWorkspaceInstance, error) {
 	// create client
 	managementClient, err := baseClient.Management()
 	if err != nil {
@@ -91,7 +92,7 @@ func FindWorkspaceInProject(ctx context.Context, baseClient client.Client, uid, 
 	return &workspaceList.Items[0], nil
 }
 
-func FindWorkspaceByName(ctx context.Context, baseClient client.Client, name, projectName string) (*managementv1.DevPodWorkspaceInstance, error) {
+func FindInstanceByName(ctx context.Context, baseClient client.Client, name, projectName string) (*managementv1.DevPodWorkspaceInstance, error) {
 	// create client
 	managementClient, err := baseClient.Management()
 	if err != nil {
@@ -118,7 +119,7 @@ func OptionsFromEnv(name string) url.Values {
 	return nil
 }
 
-func DialWorkspace(baseClient client.Client, workspace *managementv1.DevPodWorkspaceInstance, subResource string, values url.Values, log log.Logger) (*websocket.Conn, error) {
+func DialInstance(baseClient client.Client, workspace *managementv1.DevPodWorkspaceInstance, subResource string, values url.Values, log log.Logger) (*websocket.Conn, error) {
 	restConfig, err := baseClient.ManagementConfig()
 	if err != nil {
 		return nil, err
@@ -162,4 +163,64 @@ func DialWorkspace(baseClient client.Client, workspace *managementv1.DevPodWorks
 	}
 
 	return conn, nil
+}
+
+func WaitForInstance(ctx context.Context, client client.Client, instance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
+	managementClient, err := client.Management()
+	if err != nil {
+		return nil, err
+	}
+
+	var updatedInstance *managementv1.DevPodWorkspaceInstance
+	// we need to wait until instance is scheduled
+	err = wait.PollUntilContextTimeout(ctx, time.Second, 30*time.Second, true, func(ctx context.Context) (done bool, err error) {
+		updatedInstance, err = managementClient.Loft().ManagementV1().
+			DevPodWorkspaceInstances(instance.GetNamespace()).
+			Get(ctx, instance.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		name := updatedInstance.GetName()
+		status := updatedInstance.Status
+
+		if !isReady(updatedInstance) {
+			log.Debugf("Workspace %s is in phase %s, waiting until its ready", name, status.Phase)
+			return false, nil
+		}
+
+		if !isRunnerReady(updatedInstance, storagev1.BuiltinRunnerName) {
+			log.Debugf("Runner is not ready yet, waiting until its ready", name, status.Phase)
+			return false, nil
+		}
+
+		log.Debugf("Workspace %s is ready", name)
+		return true, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("wait for instance to get ready: %w", err)
+	}
+
+	return updatedInstance, nil
+}
+
+func isReady(workspace *managementv1.DevPodWorkspaceInstance) bool {
+	// Sleeping is considered ready in this context. The workspace will be woken up as soon as we connect to it
+	if workspace.Status.Phase == storagev1.InstanceSleeping {
+		return true
+	}
+
+	return workspace.Status.Phase == storagev1.InstanceReady
+}
+
+func isRunnerReady(workspace *managementv1.DevPodWorkspaceInstance, builtinRunnerName string) bool {
+	if workspace.Spec.RunnerRef.Runner == "" {
+		return true
+	}
+
+	if workspace.Spec.RunnerRef.Runner == builtinRunnerName {
+		return true
+	}
+
+	return workspace.GetAnnotations() != nil &&
+		workspace.GetAnnotations()[storagev1.DevPodWorkspaceRunnerEndpointAnnotation] != ""
 }

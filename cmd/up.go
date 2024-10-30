@@ -59,6 +59,7 @@ type UpCmd struct {
 	GPGAgentForwarding      bool
 	OpenIDE                 bool
 	SetupLoftPlatformAccess bool
+	Reconfigure             bool
 
 	SSHConfigPath string
 
@@ -102,6 +103,7 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.EnvironmentTemplate, "environment-template", "", "Environment template to use")
 	_ = upCmd.Flags().MarkHidden("environment-template")
 	upCmd.Flags().StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
+	upCmd.Flags().BoolVar(&cmd.Reconfigure, "reconfigure", false, "Reconfigure the options for this workspace. Only supported in DevPod Pro right now.")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().BoolVar(&cmd.Reset, "reset", false, "If true will remove any existing containers including sources, and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
@@ -1294,6 +1296,7 @@ func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config
 		cmd.ID,
 		cmd.Machine,
 		cmd.ProviderOptions,
+		cmd.Reconfigure,
 		cmd.DevContainerImage,
 		cmd.DevContainerPath,
 		cmd.SSHConfigPath,

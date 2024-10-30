@@ -70,10 +70,12 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	instance, err := platform.FindWorkspaceInProject(ctx, baseClient, info.UID, info.ProjectName)
+	instance, err := platform.FindInstanceInProject(ctx, baseClient, info.UID, info.ProjectName)
 	if err != nil {
 		return err
 	}
+
+	return fmt.Errorf("PLEASE REMOVE ME AGAIN")
 
 	return cmd.up(ctx, instance, baseClient)
 }
@@ -84,7 +86,7 @@ func (cmd *UpCmd) up(ctx context.Context, workspace *managementv1.DevPodWorkspac
 		options.Add("debug", "true")
 	}
 
-	conn, err := platform.DialWorkspace(client, workspace, "up", options, cmd.Log)
+	conn, err := platform.DialInstance(client, workspace, "up", options, cmd.Log)
 	if err != nil {
 		return err
 	}

@@ -58,7 +58,7 @@ func (cmd *RebuildCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	workspace, err := platform.FindWorkspaceByName(ctx, baseClient, targetWorkspace, cmd.Project)
+	workspace, err := platform.FindInstanceByName(ctx, baseClient, targetWorkspace, cmd.Project)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (cmd *RebuildCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 	values := url.Values{"options": []string{string(rawOpts)}, "cliMode": []string{"true"}}
-	conn, err := platform.DialWorkspace(baseClient, workspace, "up", values, cmd.Log)
+	conn, err := platform.DialInstance(baseClient, workspace, "up", values, cmd.Log)
 	if err != nil {
 		return err
 	}

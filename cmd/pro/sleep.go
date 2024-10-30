@@ -70,7 +70,7 @@ func (cmd *SleepCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	workspaceInstance, err := platform.FindWorkspaceByName(ctx, baseClient, targetWorkspace, cmd.Project)
+	workspaceInstance, err := platform.FindInstanceByName(ctx, baseClient, targetWorkspace, cmd.Project)
 	if err != nil {
 		return err
 	}
