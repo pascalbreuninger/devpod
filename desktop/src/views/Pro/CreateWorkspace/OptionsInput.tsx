@@ -171,7 +171,7 @@ function OptionFormField({
 
     switch (type) {
       case "boolean":
-        return <Switch {...props}>{displayName}</Switch>
+        return <Switch {...props} />
       case "number":
         return (
           <Input
@@ -260,6 +260,8 @@ function convertParameterType(paramType: StorageV1AppParameter["type"]): TProvid
       return "number"
     case "password":
       return "string"
+    case "boolean":
+      return "boolean"
     default:
       return undefined
   }

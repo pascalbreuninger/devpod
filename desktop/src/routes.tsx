@@ -1,7 +1,7 @@
 import { Outlet, Params, Path, createBrowserRouter } from "react-router-dom"
 import { App, ErrorPage } from "./App"
 import { TActionID } from "./contexts"
-import { exists } from "./lib"
+import { TProInstanceDetail, exists } from "./lib"
 import { TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
 import { Actions, Pro, Providers, Settings, Workspaces } from "./views"
 
@@ -84,20 +84,30 @@ export const Routes = {
 
     return `/pro/${h}`
   },
-  toProWorkspace(host: string, instanceName: string): string {
+  toProWorkspace(host: string, instanceID: string): string {
     const base = this.toProInstance(host)
 
-    return `${base}/${instanceName}`
+    return `${base}/${instanceID}`
   },
   toProWorkspaceCreate(host: string): string {
     const base = this.toProInstance(host)
 
     return `${base}/new`
   },
+  toProWorkspaceDetail(host: string, instanceID: string, detail: TProInstanceDetail): string {
+    const base = this.toProInstance(host)
+
+    return `${base}/${instanceID}?tab=${detail}`
+  },
   toProSettings(host: string): string {
     const base = this.toProInstance(host)
 
     return `${base}/settings`
+  },
+  getProWorkspaceDetailsParams(
+    searchParams: URLSearchParams
+  ): Partial<Readonly<{ tab: TProInstanceDetail | null }>> {
+    return { tab: searchParams.get("tab") as TProInstanceDetail | null }
   },
 } as const
 

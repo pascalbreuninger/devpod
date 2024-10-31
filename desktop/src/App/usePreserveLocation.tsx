@@ -17,9 +17,9 @@ export function usePreserveLocation() {
     const match = matchRoutes(
       [
         { path: Routes.ROOT },
-        { path: `${Routes.PROVIDER}/*` },
-        { path: `${Routes.WORKSPACES}/*` },
-        { path: `${Routes.PRO}/*` },
+        { path: Routes.PROVIDER },
+        { path: Routes.WORKSPACES },
+        { path: Routes.PRO_INSTANCE },
       ],
       location
     )

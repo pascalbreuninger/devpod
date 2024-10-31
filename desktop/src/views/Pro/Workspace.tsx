@@ -13,7 +13,9 @@ import {
 import { Clock, Folder, Git, Globe, Image, Status } from "@/icons"
 import {
   Annotations,
+  Labels,
   Source,
+  TProInstanceDetail,
   getDisplayName,
   getLastActivity,
   useDeleteWorkspaceModal,
@@ -38,21 +40,35 @@ import {
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import dayjs from "dayjs"
-import { ReactElement, cloneElement, useCallback, useEffect, useMemo, useRef } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import {
+  ComponentType,
+  ReactElement,
+  cloneElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { BackToWorkspaces } from "./BackToWorkspaces"
-import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { UpdateWorkspace } from "./CreateWorkspace"
+import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
+import { WorkspaceStatus } from "./WorkspaceStatus"
 
-const DETAILS_TABS = [
-  { label: "Logs", component: Logs },
-  { label: "Configuration", component: Configuration },
+const DETAILS_TABS: Readonly<{
+  key: TProInstanceDetail
+  label: string
+  component: ComponentType<TTabProps>
+}>[] = [
+  { key: "logs", label: "Logs", component: Logs },
+  { key: "configuration", label: "Configuration", component: Configuration },
 ]
 export function Workspace() {
+  const params = useParams<{ workspace: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: templates } = useTemplates()
   const { data: projectClusters } = useProjectClusters()
   const { host } = useProContext()
-  const params = useParams()
   const navigate = useNavigate()
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
@@ -96,6 +112,27 @@ export function Workspace() {
     [projectClusters, instance]
   )
 
+  const tabIndex = useMemo(() => {
+    const currentTab = Routes.getProWorkspaceDetailsParams(searchParams).tab
+
+    const idx = DETAILS_TABS.findIndex((v) => v.key === currentTab)
+    if (idx === -1) {
+      return 0
+    }
+
+    return idx
+  }, [searchParams])
+
+  const handleTabIndexChanged = (newIndex: number) => {
+    const key = DETAILS_TABS[newIndex]?.key
+    if (!key) return
+    setSearchParams((prev) => {
+      prev.set("tab", key)
+
+      return prev
+    })
+  }
+
   if (!instance) {
     return (
       <VStack align="start" gap="4">
@@ -121,16 +158,15 @@ export function Workspace() {
   const sourceInfo = getSourceInfo(
     Source.fromRaw(instance.metadata?.annotations?.[Annotations.WorkspaceSource])
   )
+  const uid = instance.metadata?.labels?.[Labels.WorkspaceUID]
 
   const lastActivity = getLastActivity(instance)
 
   return (
     <>
       <VStack align="start" width="full" height="full">
-        <Box position="sticky" top="0">
-          <BackToWorkspaces />
-        </Box>
-        <VStack align="start" width="full" py="4" top="8">
+        <BackToWorkspaces />
+        <VStack align="start" width="full" py="4">
           <Box w="full">
             <WorkspaceCardHeader instance={instance} showSource={false}>
               <WorkspaceCardHeader.Controls
@@ -143,17 +179,19 @@ export function Workspace() {
             </WorkspaceCardHeader>
           </Box>
 
-          <HStack mt="4" gap="8">
+          <HStack mt="4" gap="6" flexWrap="wrap">
+            <WorkspaceInfoDetail label={<WorkspaceStatus status={instance.status} />} />
             <WorkspaceInfoDetail
               icon={Status}
-              label={<Text>{instance.status?.lastWorkspaceStatus ?? ""}</Text>}
+              label={
+                <HStack whiteSpace="nowrap" wordBreak={"keep-all"}>
+                  <Text>{instance.id} (ID)</Text>
+                  <Text>{uid} (UID)</Text>
+                </HStack>
+              }
             />
-            <WorkspaceInfoDetail icon={Status} label={<Text>ID/UID</Text>} />
             {sourceInfo && <WorkspaceInfoDetail icon={sourceInfo.icon} label={sourceInfo.label} />}
-            <WorkspaceInfoDetail
-              icon={Status}
-              label={<Text>{getDisplayName(template, instance.spec?.templateRef?.name)}</Text>}
-            />
+            <WorkspaceInfoDetail icon={Status} label={formatTemplateDetail(instance, template)} />
             <WorkspaceInfoDetail icon={Globe} label={<Text>{getDisplayName(runner)}</Text>} />
             {lastActivity && (
               <WorkspaceInfoDetail
@@ -164,10 +202,16 @@ export function Workspace() {
           </HStack>
         </VStack>
         <Box height="full">
-          <Tabs colorScheme="gray" isLazy w="full" h="full">
-            <TabList ml="-8" px="8" mb="0" bgColor={headerBackgroundColor} top="40">
-              {DETAILS_TABS.map(({ label }) => (
-                <Tab fontWeight="semibold" key={label}>
+          <Tabs
+            colorScheme="gray"
+            isLazy
+            w="full"
+            h="full"
+            index={tabIndex}
+            onChange={handleTabIndexChanged}>
+            <TabList ml="-8" px="8" mb="0" bgColor={headerBackgroundColor}>
+              {DETAILS_TABS.map(({ key, label }) => (
+                <Tab fontWeight="semibold" key={key}>
                   {label}
                 </Tab>
               ))}
@@ -245,15 +289,15 @@ function Configuration({ instance, template }: TTabProps) {
 }
 
 type TWorkspaceInfoDetailProps = Readonly<{
-  icon: ComponentWithAs<"svg", IconProps>
+  icon?: ComponentWithAs<"svg", IconProps>
   label: ReactElement
 }>
 function WorkspaceInfoDetail({ icon: Icon, label }: TWorkspaceInfoDetailProps) {
   const l = cloneElement(label, { color: "gray.600" })
 
   return (
-    <HStack gap="1">
-      <Icon boxSize="5" color="gray.500" />
+    <HStack gap="1" whiteSpace="nowrap" userSelect="text" cursor="text">
+      {Icon && <Icon boxSize="5" color="gray.500" />}
       {l}
     </HStack>
   )
@@ -283,4 +327,22 @@ function getSourceInfo(
         label: <Text>{source.value}</Text>,
       }
   }
+}
+
+function formatTemplateDetail(
+  instance: ProWorkspaceInstance,
+  template: ManagementV1DevPodWorkspaceTemplate | undefined
+): ReactElement {
+  const templateName = instance.spec?.templateRef?.name
+  const templateDisplayName = getDisplayName(template, templateName)
+  let templateVersion = instance.spec?.templateRef?.version
+  if (!templateVersion) {
+    templateVersion = "latest"
+  }
+
+  return (
+    <Text>
+      {templateDisplayName}/{templateVersion}
+    </Text>
+  )
 }

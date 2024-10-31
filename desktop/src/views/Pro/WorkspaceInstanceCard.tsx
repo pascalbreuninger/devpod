@@ -24,6 +24,7 @@ import { useCallback, useMemo } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceInfoDetail } from "./WorkspaceInfoDetail"
+import { WorkspaceStatus } from "./WorkspaceStatus"
 
 type TWorkspaceInstanceCardProps = Readonly<{
   host: string
@@ -115,7 +116,7 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
         <CardBody pt="0">
           <HStack gap="6">
             <WorkspaceInfoDetail icon={Status} label={<Text>Status</Text>}>
-              <Text>{instance.status?.phase!}</Text>
+              <WorkspaceStatus status={instance.status} />
             </WorkspaceInfoDetail>
 
             <WorkspaceInfoDetail icon={Status} label={<Text>Template</Text>}>

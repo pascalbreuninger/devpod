@@ -44,7 +44,8 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid strin
 				OptionsFunc(func() []huh.Option[*managementv1.Runner] {
 					return getRunnerOptions(ctx, baseClient, selectedProject, cancelForm, log)
 				}, &selectedProject).
-				Value(&selectedRunner),
+				Value(&selectedRunner).
+				WithHeight(5),
 			huh.NewSelect[*managementv1.DevPodWorkspaceTemplate]().
 				Title("Template").
 				OptionsFunc(func() []huh.Option[*managementv1.DevPodWorkspaceTemplate] {
@@ -56,7 +57,8 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid strin
 				OptionsFunc(func() []huh.Option[string] {
 					return getTemplateVersionOptions(ctx, selectedTemplate, cancelForm, log)
 				}, &selectedTemplate).
-				Value(&selectedTemplateVersion),
+				Value(&selectedTemplateVersion).
+				WithHeight(8),
 		),
 	).RunWithContext(formCtx)
 	if err != nil {
@@ -158,7 +160,8 @@ func UpdateInstance(ctx context.Context, baseClient client.Client, instance *man
 				OptionsFunc(func() []huh.Option[string] {
 					return getTemplateVersionOptions(ctx, selectedTemplate, cancelForm, log)
 				}, &selectedTemplate).
-				Value(&selectedTemplateVersion),
+				Value(&selectedTemplateVersion).
+				WithHeight(8),
 		),
 	).RunWithContext(formCtx)
 	if err != nil {

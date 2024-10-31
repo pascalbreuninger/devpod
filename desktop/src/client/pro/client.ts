@@ -53,7 +53,6 @@ export class ProClient implements TDebuggable {
       .stream(
         (event) => {
           if (event.type === "data") {
-            // FIXME: types
             const rawInstances =
               event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[]
             const workspaceInstances = rawInstances.map(

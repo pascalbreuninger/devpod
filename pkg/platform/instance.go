@@ -54,13 +54,11 @@ func GetWorkspaceInfoFromEnv() (*WorkspaceInfo, error) {
 }
 
 func FindInstance(ctx context.Context, baseClient client.Client, uid string) (*managementv1.DevPodWorkspaceInstance, error) {
-	// create client
 	managementClient, err := baseClient.Management()
 	if err != nil {
 		return nil, fmt.Errorf("create management client: %w", err)
 	}
 
-	// get workspace
 	workspaceList, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances("").List(ctx, metav1.ListOptions{
 		LabelSelector: storagev1.DevPodWorkspaceUIDLabel + "=" + uid,
 	})
@@ -73,13 +71,11 @@ func FindInstance(ctx context.Context, baseClient client.Client, uid string) (*m
 	return &workspaceList.Items[0], nil
 }
 func FindInstanceInProject(ctx context.Context, baseClient client.Client, uid, projectName string) (*managementv1.DevPodWorkspaceInstance, error) {
-	// create client
 	managementClient, err := baseClient.Management()
 	if err != nil {
 		return nil, fmt.Errorf("create management client: %w", err)
 	}
 
-	// get workspace
 	workspaceList, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(project.ProjectNamespace(projectName)).List(ctx, metav1.ListOptions{
 		LabelSelector: storagev1.DevPodWorkspaceUIDLabel + "=" + uid,
 	})
@@ -93,13 +89,11 @@ func FindInstanceInProject(ctx context.Context, baseClient client.Client, uid, p
 }
 
 func FindInstanceByName(ctx context.Context, baseClient client.Client, name, projectName string) (*managementv1.DevPodWorkspaceInstance, error) {
-	// create client
 	managementClient, err := baseClient.Management()
 	if err != nil {
 		return nil, fmt.Errorf("create management client: %w", err)
 	}
 
-	// get workspace
 	workspace, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(project.ProjectNamespace(projectName)).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err

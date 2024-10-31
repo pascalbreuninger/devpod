@@ -60,6 +60,7 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 		if err != nil {
 			return fmt.Errorf("unmarshal workpace instance %s: %w", instanceEnv, err)
 		}
+		newInstance.TypeMeta = metav1.TypeMeta{} // ignore
 
 		projectName := project.ProjectFromNamespace(newInstance.GetNamespace())
 		oldInstance, err := platform.FindInstanceByName(ctx, baseClient, newInstance.GetName(), projectName)
@@ -121,15 +122,15 @@ func updateInstance(ctx context.Context, client client.Client, oldInstance *mana
 	if err != nil {
 		return nil, err
 	} else if len(data) == 0 || string(data) == "{}" {
-		return nil, nil
+		return newInstance, nil
 	}
 
-	_, err = managementClient.Loft().ManagementV1().
+	res, err := managementClient.Loft().ManagementV1().
 		DevPodWorkspaceInstances(oldInstance.GetNamespace()).
 		Patch(ctx, oldInstance.GetName(), patch.Type(), data, metav1.PatchOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	return platform.WaitForInstance(ctx, client, newInstance, log)
+	return platform.WaitForInstance(ctx, client, res, log)
 }

@@ -5,28 +5,28 @@ import {
   useWorkspace,
   useWorkspaceStore,
 } from "@/contexts"
-import { Failed, Labels, Result, Return } from "@/lib"
+import { Failed, Result, Return } from "@/lib"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
+import jsyaml from "js-yaml"
 import { useState } from "react"
 import { CreateWorkspaceForm } from "./CreateWorkspaceForm"
 import { TFormValues } from "./types"
-import jsyaml from "js-yaml"
+import { useNavigate } from "react-router"
+import { Routes } from "@/routes"
 
 type TUpdateWorkspaceProps = Readonly<{
   instance: ProWorkspaceInstance
   template: ManagementV1DevPodWorkspaceTemplate | undefined
 }>
 export function UpdateWorkspace({ instance, template }: TUpdateWorkspaceProps) {
+  const navigate = useNavigate()
   const workspace = useWorkspace<ProWorkspaceInstance>(instance.id)
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
-  const { client } = useProContext()
+  const { host, client } = useProContext()
   const [globalError, setGlobalError] = useState<Failed | null>(null)
 
   const handleSubmit = async (values: TFormValues) => {
     setGlobalError(null)
-    // TODO: Update DevPod Workspace instance
-    // Then pass updated instance to update command...
-    // Then call `up` on new instance
 
     const res = updateWorkspaceInstance(instance, values)
     if (res.err) {
@@ -44,16 +44,10 @@ export function UpdateWorkspace({ instance, template }: TUpdateWorkspaceProps) {
     // update workspace store immediately
     const updatedInstance = new ProWorkspaceInstance(updateRes.val)
     store.setWorkspace(updatedInstance.id, updatedInstance)
-    const id = instance.metadata?.labels?.[Labels.WorkspaceID]
-    if (!id) {
-      setGlobalError(new Failed(`Workspace ID not found for workspace ${instance.id}`))
 
-      return
-    }
+    workspace.start({ id: updatedInstance.id, ideConfig: { name: values.defaultIDE } })
 
-    workspace.start({ id, ideConfig: { name: values.defaultIDE } })
-
-    // TODO: Switch tab to logs
+    navigate(Routes.toProWorkspaceDetail(host, instance.id, "logs"))
   }
 
   const handleReset = () => {

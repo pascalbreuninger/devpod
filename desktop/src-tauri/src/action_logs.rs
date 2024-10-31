@@ -88,23 +88,28 @@ pub fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
     // delete all actions older than a month
     let now = SystemTime::now();
     let dir = fs::read_dir(dir_path);
-    let paths_to_delete = dir?
-        .filter_map(|r| {
-            if !r.is_ok() { return None; }
-            let entry = r.unwrap();
-            let path = entry.path();
+    let paths_to_delete = dir?.filter_map(|r| {
+        if !r.is_ok() {
+            return None;
+        }
+        let entry = r.unwrap();
+        let path = entry.path();
 
-            let metadata = entry.metadata();
-            if !metadata.is_ok() { return None; };
-            let created = metadata.unwrap().created();
-            if !created.is_ok() { return None; };
+        let metadata = entry.metadata();
+        if !metadata.is_ok() {
+            return None;
+        };
+        let created = metadata.unwrap().created();
+        if !created.is_ok() {
+            return None;
+        };
 
-            let elapsed = now.duration_since(created.unwrap());
-            if !elapsed.is_ok() || elapsed.unwrap() > THIRTY_DAYS {
-                return None;
-            }
-            return Some(path);
-        });
+        let elapsed = now.duration_since(created.unwrap());
+        if !elapsed.is_ok() || elapsed.unwrap() < THIRTY_DAYS {
+            return None;
+        }
+        return Some(path);
+    });
 
     for path in paths_to_delete {
         info!("Deleting {:?}", path);
