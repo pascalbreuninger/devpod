@@ -1,6 +1,6 @@
 import { ProWorkspaceInstance } from "@/contexts"
 import { CheckCircle, CircleDuotone, Clock, ExclamationTriangle, NotFound, Sleep } from "@/icons"
-import { BoxProps, ChakraTheme, HStack, ResponsiveValue, Text, VStack } from "@chakra-ui/react"
+import { BoxProps, HStack, Text } from "@chakra-ui/react"
 import React from "react"
 
 export const InstancePhase = {
@@ -28,15 +28,15 @@ const badgeOptionMappings: {
   [key in TWorkspaceDisplayStatus]?: Pick<TStatusBadgeProps, "icon" | "color">
 } = {
   [WorkspaceDisplayStatus.Pending]: {
-    icon: <Clock />,
+    icon: <Clock boxSize={5} />,
     color: "orange.500",
   },
   [WorkspaceDisplayStatus.Sleeping]: {
-    icon: <Sleep />,
+    icon: <Sleep boxSize={5} />,
     color: "#706BFF",
   },
   [WorkspaceDisplayStatus.Error]: {
-    icon: <ExclamationTriangle />,
+    icon: <ExclamationTriangle boxSize={5} />,
     color: "red.500",
   },
   [WorkspaceDisplayStatus.NotFound]: {
@@ -44,23 +44,23 @@ const badgeOptionMappings: {
     color: "gray.600",
   },
   [WorkspaceDisplayStatus.Stopped]: {
-    icon: <CircleDuotone />,
+    icon: <CircleDuotone boxSize={5} />,
     color: "red.400",
   },
   [WorkspaceDisplayStatus.Busy]: {
-    icon: <CircleDuotone />,
+    icon: <CircleDuotone boxSize={5} />,
     color: "red.500",
   },
   [WorkspaceDisplayStatus.Running]: {
-    icon: <CircleDuotone />,
+    icon: <CircleDuotone boxSize={5} />,
     color: "primary.500",
   },
   [WorkspaceDisplayStatus.Ready]: {
-    icon: <CheckCircle />,
+    icon: <CheckCircle boxSize={5} />,
     color: "primary.400",
   },
   [WorkspaceDisplayStatus.WaitingToInitialize]: {
-    icon: <CircleDuotone />,
+    icon: <CircleDuotone boxSize={5} />,
     color: "gray.600",
   },
 }
@@ -87,7 +87,7 @@ function StatusBadge({ icon, displayStatus, color }: TStatusBadgeProps) {
   }
 
   return (
-    <HStack w="full" align="start" color={color}>
+    <HStack w="full" align="center" justify="start" gap="1" color={color}>
       {icon}
       <Text fontWeight="medium">{s}</Text>
     </HStack>
