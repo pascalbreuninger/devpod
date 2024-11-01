@@ -213,6 +213,7 @@ export function useWorkspace<TW extends TIdentifiable>(
       if (workspaceID === undefined) {
         return
       }
+      console.log(workspaceID, force)
 
       return removeWorkspaceAction({ force, workspaceID, onStream, streamID: viewID, store })
     },

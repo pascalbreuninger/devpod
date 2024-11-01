@@ -1,4 +1,4 @@
-import { WarningMessageBox, useStreamingTerminal } from "@/components"
+import { CollapsibleSection, WarningMessageBox, useStreamingTerminal } from "@/components"
 import {
   ProWorkspaceInstance,
   useProContext,
@@ -10,31 +10,48 @@ import {
   TWorkspaceResult,
   useWorkspaceActions,
 } from "@/contexts/DevPodContext/workspaces/useWorkspace"
-import { Clock, Folder, Git, Globe, Image, Status } from "@/icons"
+import {
+  CheckCircle,
+  Clock,
+  ExclamationCircle,
+  ExclamationTriangle,
+  Folder,
+  Git,
+  Globe,
+  Image,
+  Status,
+} from "@/icons"
 import {
   Annotations,
   Labels,
   Source,
   TProInstanceDetail,
+  getActionDisplayName,
   getDisplayName,
   getLastActivity,
   useDeleteWorkspaceModal,
+  useDownloadLogs,
   useRebuildWorkspaceModal,
   useResetWorkspaceModal,
   useStopWorkspaceModal,
 } from "@/lib"
 import { Routes } from "@/routes"
+import { DownloadIcon } from "@chakra-ui/icons"
 import {
   Box,
   ComponentWithAs,
   HStack,
+  IconButton,
   IconProps,
+  LinkBox,
+  LinkOverlay,
   Tab,
   TabList,
   TabPanel,
   TabPanels,
   Tabs,
   Text,
+  Tooltip,
   VStack,
   useColorModeValue,
 } from "@chakra-ui/react"
@@ -49,7 +66,13 @@ import {
   useMemo,
   useRef,
 } from "react"
-import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import {
+  Link as RouterLink,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom"
 import { BackToWorkspaces } from "./BackToWorkspaces"
 import { UpdateWorkspace } from "./CreateWorkspace"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
@@ -70,6 +93,7 @@ export function Workspace() {
   const { data: projectClusters } = useProjectClusters()
   const { host } = useProContext()
   const navigate = useNavigate()
+  console.log(params)
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
   const instanceDisplayName = getDisplayName(instance)
@@ -77,13 +101,21 @@ export function Workspace() {
   const contentBackgroundColor = useColorModeValue("gray.50", "gray.800")
 
   const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
-    useCallback(() => workspace.stop(), [workspace])
+    useCallback(
+      (close) => {
+        close()
+        workspace.stop()
+      },
+      [workspace]
+    )
   )
   const { modal: deleteModal, open: openDeleteModal } = useDeleteWorkspaceModal(
     instanceDisplayName,
     useCallback(
-      (force: boolean) => {
+      (force, close) => {
+        console.log(force)
         workspace.remove(force)
+        close()
         navigate(Routes.toProInstance(host))
       },
       [workspace, host, navigate]
@@ -91,11 +123,23 @@ export function Workspace() {
   )
   const { modal: rebuildModal, open: openRebuildModal } = useRebuildWorkspaceModal(
     instanceDisplayName,
-    useCallback(() => workspace.rebuild(), [workspace])
+    useCallback(
+      (close) => {
+        close()
+        workspace.rebuild()
+      },
+      [workspace]
+    )
   )
   const { modal: resetModal, open: openResetModal } = useResetWorkspaceModal(
     instanceDisplayName,
-    useCallback(() => workspace.reset(), [workspace])
+    useCallback(
+      (close) => {
+        close()
+        workspace.reset()
+      },
+      [workspace]
+    )
   )
   const template = useMemo(
     () =>
@@ -185,8 +229,9 @@ export function Workspace() {
               icon={Status}
               label={
                 <HStack whiteSpace="nowrap" wordBreak={"keep-all"}>
-                  <Text>{instance.id} (ID)</Text>
-                  <Text>{uid} (UID)</Text>
+                  <Text>
+                    ID/UID: {instance.id}/{uid}
+                  </Text>
                 </HStack>
               }
             />
@@ -216,9 +261,10 @@ export function Workspace() {
                 </Tab>
               ))}
             </TabList>
-            <TabPanels>
+            <TabPanels h="full">
               {DETAILS_TABS.map(({ label, component: Component }) => (
                 <TabPanel
+                  h="full"
                   width="100vw"
                   ml="-8"
                   px="8"
@@ -226,7 +272,12 @@ export function Workspace() {
                   pb="0"
                   key={label}
                   bgColor={contentBackgroundColor}>
-                  <Component workspace={workspace} instance={instance} template={template} />
+                  <Component
+                    host={host}
+                    workspace={workspace}
+                    instance={instance}
+                    template={template}
+                  />
                 </TabPanel>
               ))}
             </TabPanels>
@@ -243,15 +294,21 @@ export function Workspace() {
 }
 
 type TTabProps = Readonly<{
+  host: string
   workspace: TWorkspaceResult<ProWorkspaceInstance>
   instance: ProWorkspaceInstance
   template: ManagementV1DevPodWorkspaceTemplate | undefined
 }>
 
-function Logs({ workspace, instance }: TTabProps) {
+function Logs({ host, workspace, instance }: TTabProps) {
   const { terminal, connectStream, clear: clearTerminal } = useStreamingTerminal()
   const actions = useWorkspaceActions(instance.id)
   const lastActionIDRef = useRef<string | null>(null)
+  const actionHoverColor = useColorModeValue("gray.100", "gray.800")
+  const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
+  const { download, isDownloading } = useDownloadLogs()
+
+  const location = useLocation()
 
   useEffect(() => {
     if (workspace.current) {
@@ -267,7 +324,13 @@ function Logs({ workspace, instance }: TTabProps) {
       return
     }
 
-    const actionID = actions?.find((action) => action.name === "start")?.id
+    let actionID: string | undefined = undefined
+    if (location.state?.actionID) {
+      actionID = actions?.find((action) => action.id === location.state.actionID)?.id
+    } else {
+      actionID = actions?.[0]?.id
+    }
+
     if (!actionID || actionID === lastActionIDRef.current) {
       return
     }
@@ -275,12 +338,74 @@ function Logs({ workspace, instance }: TTabProps) {
     lastActionIDRef.current = actionID
     clearTerminal()
     workspace.history.replay(actionID, connectStream)
-  }, [actions, clearTerminal, connectStream, workspace])
+  }, [actions, clearTerminal, connectStream, location, workspace])
 
   return (
-    <Box h="60vh" mb="14">
-      {terminal}
-    </Box>
+    <VStack align="start" w="full">
+      {actions && actions.length > 0 && (
+        <CollapsibleSection title="All logs" showIcon>
+          <VStack align="start" h="72" w="full" overflowY="auto">
+            {actions.map((action) => {
+              if (action.status === "pending") {
+                return null
+              }
+
+              return (
+                <LinkBox
+                  key={action.id}
+                  padding={2}
+                  fontSize="sm"
+                  borderRadius="md"
+                  width="full"
+                  display="flex"
+                  flexFlow="row nowrap"
+                  alignItems="center"
+                  gap={3}
+                  _hover={{ backgroundColor: actionHoverColor }}>
+                  {action.status === "success" && <CheckCircle color="green.300" />}
+                  {action.status === "error" && <ExclamationCircle color="red.300" />}
+                  {action.status === "cancelled" && <ExclamationTriangle color="orange.300" />}
+
+                  <VStack align="start" spacing="0">
+                    <Text fontWeight="bold">
+                      <LinkOverlay
+                        as={RouterLink}
+                        to={Routes.toProWorkspaceDetail(host, instance.id, "logs")}
+                        state={{ origin: location.pathname, actionID: action.id }}
+                        textTransform="capitalize">
+                        {getActionDisplayName(action)}
+                      </LinkOverlay>
+                    </Text>
+                    {action.finishedAt !== undefined && (
+                      <Text color={subheadingTextColor} marginTop="-1">
+                        {dayjs(action.finishedAt).fromNow()}
+                      </Text>
+                    )}
+                  </VStack>
+
+                  <Tooltip label="Save Logs">
+                    <IconButton
+                      ml="auto"
+                      mr="4"
+                      isLoading={isDownloading}
+                      title="Save Logs"
+                      variant="outline"
+                      aria-label="Save Logs"
+                      icon={<DownloadIcon />}
+                      onClick={() => download({ actionID: action.id })}
+                    />
+                  </Tooltip>
+                </LinkBox>
+              )
+            })}
+          </VStack>
+        </CollapsibleSection>
+      )}
+
+      <Box h="50vh" w="full" mb="8" mt="8">
+        {terminal}
+      </Box>
+    </VStack>
   )
 }
 

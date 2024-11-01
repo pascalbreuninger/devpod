@@ -10,6 +10,17 @@ export class ProWorkspaceInstance
 {
   public readonly status: ProWorkspaceInstanceStatus | undefined
 
+  public get uid(): string {
+    const maybeUID = this.metadata?.labels?.[Labels.WorkspaceUID]
+    if (!maybeUID) {
+      // If we don't have an ID we should ignore the instance.
+      // Throwing an error for now to see how often this happens
+      throw new Error(`No Workspace UID label present on instance ${this.metadata?.name}`)
+    }
+
+    return maybeUID
+  }
+
   public get id(): string {
     const maybeID = this.metadata?.labels?.[Labels.WorkspaceID]
     if (!maybeID) {

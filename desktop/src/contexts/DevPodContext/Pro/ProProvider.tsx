@@ -100,7 +100,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     return { managementSelf, currentProject, host, client, isLoading }
   }, [currentProject, managementSelf, host, client, isLoading])
 
-  // TODO: handle properly with loading indicator
+  // TODO: handle properly
   if ((!managementSelf || !currentProject) && !connectionError) {
     return null
   }

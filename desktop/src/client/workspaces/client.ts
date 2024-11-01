@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api"
 import { TActionID, TActionName, TActionObj } from "../../contexts"
 import { Result, ResultError, Return, THandler, exists, isError, noop } from "../../lib"
 import {
@@ -19,6 +18,7 @@ import {
   DEVPOD_FLAG_GIT_SIGNING_KEY,
   WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY,
 } from "../constants"
+import { invoke } from "@tauri-apps/api/core"
 
 // Every workspace can have one active action at a time,
 // but multiple views might need to listen to the same action.
@@ -145,6 +145,7 @@ export class WorkspacesClient implements TDebuggable {
     ctx: TWorkspaceClientContext
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.StartWorkspace(ctx.id, config)
+    console.log(cmd)
     const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "start" })
     if (result.err) {
       return result

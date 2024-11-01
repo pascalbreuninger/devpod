@@ -75,8 +75,6 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	return fmt.Errorf("PLEASE REMOVE ME AGAIN")
-
 	return cmd.up(ctx, instance, baseClient)
 }
 

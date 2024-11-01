@@ -78,7 +78,7 @@ export function ListWorkspaces() {
           </HStack>
           <List w="full" mb="4">
             {projectInstances.currentUser.map((instance) => (
-              <ListItem key={instance.id}>
+              <ListItem key={instance.uid}>
                 <WorkspaceInstanceCard host={host} instanceName={instance.id} />
               </ListItem>
             ))}

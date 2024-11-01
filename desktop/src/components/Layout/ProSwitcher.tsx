@@ -1,6 +1,13 @@
 import { client } from "@/client"
 import { useProInstances, useSettings } from "@/contexts"
-import { Briefcase, CheckCircle, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
+import {
+  Briefcase,
+  CheckCircle,
+  CircleWithArrow,
+  DevPodProBadge,
+  ExclamationTriangle,
+  Plus,
+} from "@/icons"
 import { exists, useLoginProModal, useReLoginProModal } from "@/lib"
 import { Routes } from "@/routes"
 import { TProID, TProInstance, TProInstances } from "@/types"
@@ -15,6 +22,8 @@ import {
   Icon,
   IconButton,
   Link,
+  List,
+  ListItem,
   Popover,
   PopoverArrow,
   PopoverBody,
@@ -30,7 +39,7 @@ import {
 import dayjs from "dayjs"
 import { Dispatch, ReactElement, SetStateAction, useEffect, useState } from "react"
 import { HiArrowRightOnRectangle, HiClock } from "react-icons/hi2"
-import { Link as ReactRouterLink } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { IconTag } from "../Tag"
 
 export function ProSwitcher() {
@@ -98,28 +107,50 @@ export function ProSwitcher() {
 type TProPopoverContentProps = Readonly<{
   proInstances: TProInstances | undefined
   emptyProInstances: ReactElement
-  // setIsDeleting: Dispatch<SetStateAction<boolean>>
-  // onConnect: VoidFunction
-  // onReLogin: (host: string) => void
 }>
 function ProPopoverContent({ proInstances, emptyProInstances }: TProPopoverContentProps) {
+  const navigate = useNavigate()
+
   return (
-    <>
+    <List>
       {proInstances === undefined || proInstances.length === 0
         ? emptyProInstances
-        : proInstances.map((proInstance) => {
-            const host = proInstance.host
+        : proInstances.map(({ host, authenticated }) => {
             if (!host) {
               return null
             }
 
             return (
-              <Link as={ReactRouterLink} key={host} to={Routes.toProInstance(host)}>
-                {host}
-              </Link>
+              <ListItem key={host}>
+                <Button
+                  variant="unstyled"
+                  w="full"
+                  px="4"
+                  h="12"
+                  onClick={() => navigate(Routes.toProInstance(host))}>
+                  <HStack w="full" justify="space-between">
+                    <Text maxW="50%" overflow="hidden" textOverflow="ellipsis">
+                      {host}
+                    </Text>
+                    <HStack>
+                      {authenticated != null && (
+                        <Box
+                          boxSize="2"
+                          bg={authenticated ? "green.400" : "orange.400"}
+                          rounded="full"
+                        />
+                      )}
+                      <Text fontSize="xs" fontWeight="normal">
+                        {host}
+                      </Text>
+                      <CircleWithArrow boxSize={5} />
+                    </HStack>
+                  </HStack>
+                </Button>
+              </ListItem>
             )
           })}
-    </>
+    </List>
   )
 }
 

@@ -40,22 +40,46 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
   const navigate = useNavigate()
 
   const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
-    useCallback(() => workspace.stop(), [workspace])
+    useCallback(
+      (close) => {
+        workspace.stop()
+        close()
+      },
+      [workspace]
+    )
   )
 
   const { modal: deleteModal, open: openDeleteModal } = useDeleteWorkspaceModal(
     instanceDisplayName,
-    useCallback((force: boolean) => workspace.remove(force), [workspace])
+    useCallback(
+      (force: boolean, close) => {
+        workspace.remove(force)
+        close()
+      },
+      [workspace]
+    )
   )
 
   const { modal: rebuildModal, open: openRebuildModal } = useRebuildWorkspaceModal(
     instanceDisplayName,
-    useCallback(() => workspace.rebuild(), [workspace])
+    useCallback(
+      (close) => {
+        workspace.rebuild()
+        close()
+      },
+      [workspace]
+    )
   )
 
   const { modal: resetModal, open: openResetModal } = useResetWorkspaceModal(
     instanceDisplayName,
-    useCallback(() => workspace.reset(), [workspace])
+    useCallback(
+      (close) => {
+        workspace.reset()
+        close()
+      },
+      [workspace]
+    )
   )
 
   const { parameters, template } = useMemo<{
@@ -109,12 +133,12 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
               onDeleteClicked={openDeleteModal}
               onRebuildClicked={openRebuildModal}
               onResetClicked={openResetModal}
-              onStopClicked={!isRunning ? openStopModal : workspace.stop}
+              onStopClicked={isRunning ? openStopModal : workspace.stop}
             />
           </WorkspaceCardHeader>
         </CardHeader>
         <CardBody pt="0">
-          <HStack gap="6">
+          <HStack gap="6" align="start">
             <WorkspaceInfoDetail icon={Status} label={<Text>Status</Text>}>
               <WorkspaceStatus status={instance.status} />
             </WorkspaceInfoDetail>
@@ -130,14 +154,30 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
               <>
                 <Divider orientation="vertical" mx="2" h="12" borderColor="gray.400" />
 
-                {parameters.map((param) => (
-                  <WorkspaceInfoDetail
-                    key={param.variable}
-                    icon={CogOutlined}
-                    label={<Text>{param.label ?? param.variable ?? ""}</Text>}>
-                    <Text>{param.value ?? param.defaultValue ?? ""}</Text>
-                  </WorkspaceInfoDetail>
-                ))}
+                {parameters.map((param) => {
+                  let label = param.label
+                  if (!label) {
+                    label = param.variable
+                  }
+
+                  let value = param.value ?? param.defaultValue ?? ""
+                  if (param.type === "boolean") {
+                    if (value) {
+                      value = "true"
+                    } else {
+                      value = "false"
+                    }
+                  }
+
+                  return (
+                    <WorkspaceInfoDetail
+                      key={param.variable}
+                      icon={CogOutlined}
+                      label={<Text>{label}</Text>}>
+                      <Text>{value}</Text>
+                    </WorkspaceInfoDetail>
+                  )
+                })}
               </>
             )}
           </HStack>

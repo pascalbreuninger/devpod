@@ -8,6 +8,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use thiserror::Error;
+use tauri::Manager;
 
 const ACTION_LOGS_DIR: &str = "action_logs";
 const THIRTY_DAYS: Duration = Duration::new(60 * 60 * 24 * 30, 0);
@@ -121,7 +122,7 @@ pub fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
 
 fn get_actions_dir(app_handle: &AppHandle) -> anyhow::Result<PathBuf> {
     let mut dir_path = app_handle
-        .path_resolver()
+        .path()
         .app_data_dir()
         .context("App data dir not found")?;
     dir_path.push(ACTION_LOGS_DIR);

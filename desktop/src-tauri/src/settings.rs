@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
-use crate::{util::with_data_store, AppHandle};
+use crate::AppHandle;
+use log::error;
 use serde::Serialize;
+use tauri_plugin_store::StoreExt;
 use ts_rs::TS;
 
 const SETTINGS_FILE_NAME: &str = ".settings.json";
@@ -73,16 +75,17 @@ enum Zoom {
 
 impl Settings {
     pub fn auto_update_enabled(app_handle: &AppHandle) -> bool {
-        let mut is_enabled = false;
-        let _ = with_data_store(&app_handle, SETTINGS_FILE_NAME, |store| {
-            is_enabled = store
-                .get("autoUpdate")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
+        // check something in auto updates
+        let store = app_handle.store(SETTINGS_FILE_NAME);
+        if store.is_err() {
+            error!("unable to open store {}", SETTINGS_FILE_NAME);
+            return false;
+        }
 
-            Ok(())
-        });
-
-        return is_enabled;
+        store
+            .unwrap()
+            .get("autoUpdate")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
     }
 }

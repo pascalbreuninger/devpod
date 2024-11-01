@@ -9,7 +9,7 @@ import {
   useDisclosure,
   useToast,
 } from "@chakra-ui/react"
-import { appWindow } from "@tauri-apps/api/window"
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow"
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { client } from "../client"
@@ -19,6 +19,7 @@ import { startWorkspaceAction, useChangeSettings, useWorkspaceStore } from "../c
 import { exists, useLoginProModal } from "../lib"
 import { Routes } from "../routes"
 import { useChangelogModal } from "./useChangelogModal"
+const appWindow = getCurrentWebviewWindow()
 
 export function useAppReady() {
   const { store } = useWorkspaceStore()

@@ -11,8 +11,8 @@ use axum::{
     Json, Router,
 };
 use http::Method;
-use log::{info, warn, error};
-use nix::sys::signal::{kill, Signal, self};
+use log::{error, info, warn};
+use nix::sys::signal::{self, kill, Signal};
 use nix::unistd::Pid;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -65,14 +65,10 @@ async fn signal_handler(
     let pid = Pid::from_raw(payload.process_id);
     // TODO: convert payload.signal into signal
     let signal = Signal::SIGINT;
-    info!(
-        "sending signal {} to process {}",
-        signal,
-        pid.to_string()
-    );
+    info!("sending signal {} to process {}", signal, pid.to_string());
     if let Err(err) = signal::kill(pid, signal) {
         error!("Failed to kill process: {}", err);
-            return StatusCode::INTERNAL_SERVER_ERROR;
+        return StatusCode::INTERNAL_SERVER_ERROR;
     }
 
     info!("successfully killed process");
@@ -81,19 +77,11 @@ async fn signal_handler(
 }
 
 async fn releases_handler(AxumState(server): AxumState<ServerState>) -> impl IntoResponse {
-    #[cfg(feature = "enable-updater")]
-    {
-        let state = server.app_handle.state::<AppState>();
-        let releases = state.releases.lock().unwrap();
-        let releases = releases.clone();
+    let state = server.app_handle.state::<AppState>();
+    let releases = state.releases.lock().unwrap();
+    let releases = releases.clone();
 
-        Json(releases)
-    }
-
-    #[cfg(not(feature = "enable-updater"))]
-    {
-        (StatusCode::NO_CONTENT, "Updater not enabled")
-    }
+    Json(releases)
 }
 
 async fn ws_handler(

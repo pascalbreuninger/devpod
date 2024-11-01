@@ -12,26 +12,7 @@ import { router } from "./routes"
 
 dayjs.extend(relativeTime)
 
-const queryClient = new QueryClient({
-  logger: {
-    log(...args) {
-      console.log(args)
-    },
-    warn(...args) {
-      console.warn(args)
-    },
-    error(...args) {
-      const maybeError = args[0]
-      if (maybeError instanceof Error) {
-        console.error(maybeError.name, maybeError.message, maybeError.cause, maybeError)
-
-        return
-      }
-
-      console.error(args)
-    },
-  },
-})
+const queryClient = new QueryClient()
 
 // TODO: Clean up :)
 let render = true

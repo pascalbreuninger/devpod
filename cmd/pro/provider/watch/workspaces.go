@@ -66,10 +66,7 @@ type ProWorkspaceInstanceStatus struct {
 
 // TODO: File based cache?
 // TODO: Improve handler performance?
-// TODO: Hold internal structure to reduce lookups
 // TODO: only run lookups on create/update
-// TODO: What do we want to expose?
-// Do we need to move some of it into rust?
 func (cmd *WorkspacesCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	if cmd.Context == "" {
 		cmd.Context = config.DefaultContext

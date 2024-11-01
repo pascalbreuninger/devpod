@@ -167,7 +167,7 @@ export function Notifications({
                         <LinkOverlay
                           as={RouterLink}
                           to={getActionDestination(action)}
-                          state={{ origin: location.pathname }}
+                          state={{ origin: location.pathname, actionID: action.id }}
                           textTransform="capitalize">
                           {getActionDisplayName(action)}
                         </LinkOverlay>

@@ -246,8 +246,8 @@ export class ProWorkspaceStore implements IWorkspaceStore<TInstanceID, ProWorksp
       return
     }
 
+    // FIXME: Figure out duplicate IDs
     const newWorkspacesMap = new Map(instances.map((instance) => [instance.id, instance]))
-
     this.store.setWorkspaces(newWorkspacesMap)
   }
 
