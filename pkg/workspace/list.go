@@ -24,7 +24,7 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log lo
 	workspaces := map[string]*providerpkg.Workspace{}
 
 	// list local workspaces
-	localWorkspaces, err := listLocalWorkspaces(devPodConfig, log)
+	localWorkspaces, err := ListLocalWorkspaces(devPodConfig.DefaultContext, log)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +50,8 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log lo
 	return retWorkspaces, nil
 }
 
-func listLocalWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*providerpkg.Workspace, error) {
-	workspaceDir, err := providerpkg.GetWorkspacesDir(devPodConfig.DefaultContext)
+func ListLocalWorkspaces(contextName string, log log.Logger) ([]*providerpkg.Workspace, error) {
+	workspaceDir, err := providerpkg.GetWorkspacesDir(contextName)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func listLocalWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provid
 			continue
 		}
 
-		workspaceConfig, err := providerpkg.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
+		workspaceConfig, err := providerpkg.LoadWorkspaceConfig(contextName, entry.Name())
 		if err != nil {
 			log.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
 			continue
@@ -185,7 +185,8 @@ func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log
 				LastUsedTimestamp: lastUsedTimestamp,
 				CreationTimestamp: creationTimestamp,
 				Pro: &providerpkg.ProMetadata{
-					Project: projectName,
+					Project:     projectName,
+					DisplayName: instance.Spec.DisplayName,
 				},
 			}
 			retWorkspaces = append(retWorkspaces, &workspace)

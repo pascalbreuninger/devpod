@@ -6,7 +6,16 @@ import {
   useWorkspace,
   useWorkspaceStore,
 } from "@/contexts"
-import { Annotations, Failed, Labels, Result, Return, Source, safeMaxName } from "@/lib"
+import {
+  Annotations,
+  Failed,
+  Labels,
+  Result,
+  Return,
+  Source,
+  randomString,
+  safeMaxName,
+} from "@/lib"
 import { Routes } from "@/routes"
 import { Box, HStack, Heading, VStack } from "@chakra-ui/react"
 import { NewResource, Resources, getProjectNamespace } from "@loft-enterprise/client"
@@ -86,17 +95,14 @@ async function buildWorkspaceInstance(
   const workspaceSource = new Source(values.sourceType, values.source)
 
   // Workspace name
-  let name = values.name
-  if (!name) {
-    const idRes = await globalClient.workspaces.newID(workspaceSource.stringify())
-    if (idRes.err) {
-      return idRes
-    }
-    name = idRes.val
+  const sourceIDRes = await globalClient.workspaces.newID(workspaceSource.stringify())
+  if (sourceIDRes.err) {
+    return sourceIDRes
   }
+  const id = getID(sourceIDRes.val)
 
   // Kubernetes name
-  const kubeNameRes = await getKubeName(name)
+  const kubeNameRes = await getKubeName(values.name || id)
   if (kubeNameRes.err) {
     return kubeNameRes
   }
@@ -107,8 +113,8 @@ async function buildWorkspaceInstance(
   if (uidRes.err) {
     return uidRes
   }
-  const id = name
   const uid = uidRes.val
+  const displayName = values.name
   const ns = getProjectNamespace(currentProject, projectNamespacePrefix)
 
   if (!instance.metadata) {
@@ -128,7 +134,7 @@ async function buildWorkspaceInstance(
   instance.metadata.labels[Labels.WorkspaceID] = id
   instance.metadata.labels[Labels.WorkspaceUID] = uid
   instance.metadata.annotations[Annotations.WorkspaceSource] = workspaceSource.stringify()
-  instance.spec.displayName = name
+  instance.spec.displayName = displayName
 
   // Template, version and parameters
   const { workspaceTemplate: template, workspaceTemplateVersion, ...parameters } = values.options
@@ -171,4 +177,13 @@ async function getKubeName(name: string): Promise<Result<string>> {
   } catch (err) {
     return Return.Failed(`Failed to get kubernetes name from ${name}: ${err}`)
   }
+}
+
+function getID(name: string): string {
+  if (name.length <= 48 - 6) {
+    return `${name}-${randomString(5)}`
+  }
+  const start = name.substring(0, 48 - 6)
+
+  return `${start}-${randomString(5)}`
 }

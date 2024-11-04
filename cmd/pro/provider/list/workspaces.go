@@ -8,6 +8,7 @@ import (
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
+	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/labels"
 	"github.com/loft-sh/devpod/pkg/platform/project"
@@ -61,7 +62,7 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context) error {
 	}
 
 	filterByOwner := os.Getenv(provider.LOFT_FILTER_BY_OWNER) == "true"
-	workspaces := []managementv1.DevPodWorkspaceInstance{}
+	workspaces := []*managementv1.DevPodWorkspaceInstance{}
 	for _, p := range projectList.Items {
 		ns := project.ProjectNamespace(p.GetName())
 		workspaceList, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(ns).List(ctx, metav1.ListOptions{})
@@ -71,7 +72,8 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context) error {
 		}
 
 		for _, instance := range workspaceList.Items {
-			if filterByOwner && !isOwner(baseClient.Self(), instance) {
+			instance := &instance
+			if filterByOwner && !platform.IsOwner(baseClient.Self(), instance.GetOwner()) {
 				continue
 			}
 
@@ -91,18 +93,4 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context) error {
 	fmt.Println(string(wBytes))
 
 	return nil
-}
-
-func isOwner(self *managementv1.Self, instance managementv1.DevPodWorkspaceInstance) bool {
-	if instance.GetOwner() == nil {
-		return false
-	}
-	if self.Status.User != nil && self.Status.User.Name == instance.GetOwner().User {
-		return true
-	}
-	if self.Status.Team != nil && self.Status.Team.Name == instance.GetOwner().Team {
-		return true
-	}
-
-	return false
 }

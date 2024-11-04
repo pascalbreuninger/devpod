@@ -111,7 +111,10 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 	if err != nil {
 		return fmt.Errorf("load workspace config: %w", err)
 	}
-	workspaceConfig.Pro = &provider.ProMetadata{Project: project.ProjectFromNamespace(instance.GetNamespace())}
+	workspaceConfig.Pro = &provider.ProMetadata{
+		Project:     project.ProjectFromNamespace(instance.GetNamespace()),
+		DisplayName: instance.Spec.DisplayName,
+	}
 
 	err = provider.SaveWorkspaceConfig(workspaceConfig)
 	if err != nil {

@@ -327,3 +327,7 @@ func (c *ProviderConfig) IsMachineProvider() bool {
 func (c *ProviderConfig) IsProxyProvider() bool {
 	return c.Exec.Proxy != nil
 }
+
+func (c *ProviderConfig) HasHealthCheck() bool {
+	return c.Exec.Proxy != nil && len(c.Exec.Proxy.Health) > 0
+}

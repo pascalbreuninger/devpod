@@ -72,7 +72,11 @@ type Workspace struct {
 }
 
 type ProMetadata struct {
+	// Project is the platform project the workspace lives in
 	Project string `json:"project,omitempty"`
+
+	// DisplayName is the name intended to show users
+	DisplayName string `json:"displayName,omitempty"`
 }
 
 type WorkspaceIDEConfig struct {

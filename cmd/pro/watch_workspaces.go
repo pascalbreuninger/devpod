@@ -11,27 +11,31 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/platform"
+	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-// WatchCmd holds the cmd flags
-type WatchCmd struct {
+// WatchWorkspacesCmd holds the cmd flags
+type WatchWorkspacesCmd struct {
 	*flags.GlobalFlags
 	Log log.Logger
 
-	Host string
+	Host          string
+	FilterByOwner bool
 }
 
-// NewWatchCmd creates a new command
-func NewWatchCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &WatchCmd{
+// TODO: also list imported workspaces...
+
+// NewWatchWorkspacesCmd creates a new command
+func NewWatchWorkspacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &WatchWorkspacesCmd{
 		GlobalFlags: globalFlags,
 		Log:         log.GetInstance(),
 	}
 	c := &cobra.Command{
-		Use:    "watch",
+		Use:    "watch-workspaces",
 		Short:  "Watch workspaces",
 		Hidden: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
@@ -41,11 +45,12 @@ func NewWatchCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	c.Flags().StringVar(&cmd.Host, "host", "", "The pro instance to use")
 	_ = c.MarkFlagRequired("host")
+	c.Flags().BoolVar(&cmd.FilterByOwner, "filter-by-owner", true, "If true only shows workspaces of current owner")
 
 	return c
 }
 
-func (cmd *WatchCmd) Run(ctx context.Context) error {
+func (cmd *WatchWorkspacesCmd) Run(ctx context.Context) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
@@ -64,7 +69,11 @@ func (cmd *WatchCmd) Run(ctx context.Context) error {
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	sigChan := make(chan os.Signal, 0)
+	if cmd.FilterByOwner {
+		opts[providerpkg.LOFT_FILTER_BY_OWNER] = config.OptionValue{Value: "true"}
+	}
+
+	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT)
 
 	go func() {

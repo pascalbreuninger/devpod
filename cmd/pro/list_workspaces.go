@@ -62,7 +62,7 @@ func (cmd *ListWorkspacesCmd) Run(ctx context.Context) error {
 	// ignore --debug because we tunnel json through stdio
 	cmd.Log.SetLevel(logrus.InfoLevel)
 
-	if err := clientimplementation.RunCommandWithBinaries(
+	err = clientimplementation.RunCommandWithBinaries(
 		ctx,
 		"listWorkspaces",
 		provider.Exec.Proxy.List.Workspaces,
@@ -75,9 +75,7 @@ func (cmd *ListWorkspacesCmd) Run(ctx context.Context) error {
 		nil,
 		&buf,
 		nil,
-		cmd.Log); err != nil {
-		return fmt.Errorf("list workspaces with provider \"%s\": %w", provider.Name, err)
-	}
+		cmd.Log)
 	if err != nil {
 		return fmt.Errorf("list workspaces: %w", err)
 	}

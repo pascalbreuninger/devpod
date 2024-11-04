@@ -139,6 +139,8 @@ function ConnectionErrorBox({ error, host, client }: TConnectionErrorBoxProps) {
       if (res.err) {
         return res.val
       }
+
+      return null
     },
   })
   useEffect(() => {

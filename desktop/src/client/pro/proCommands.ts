@@ -141,7 +141,7 @@ export class ProCommands {
 
   static WatchWorkspaces(id: TProID) {
     const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
-    const args = [DEVPOD_COMMAND_PRO, "watch", "workspaces", hostFlag]
+    const args = [DEVPOD_COMMAND_PRO, "watch-workspaces", hostFlag]
 
     return ProCommands.newCommand(args)
   }
