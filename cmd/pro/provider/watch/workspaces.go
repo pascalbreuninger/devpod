@@ -2,7 +2,6 @@ package watch
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -117,9 +116,21 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wr
 			printInstances(stdout, instanceStore.List())
 		},
 		DeleteFunc: func(obj interface{}) {
+			fmt.Println("DeleteFunc")
+			fmt.Printf("%#v\n", obj)
 			instance, ok := obj.(*managementv1.DevPodWorkspaceInstance)
 			if !ok {
-				return
+				// check for DeletedFinalStateUnknown. Can happen if the informer misses the delete event
+				u, ok := obj.(*cache.DeletedFinalStateUnknown)
+				if !ok {
+					return
+				}
+				fmt.Printf("%#v\n", u)
+				instance, ok = u.Obj.(*managementv1.DevPodWorkspaceInstance)
+				if !ok {
+					return
+				}
+				fmt.Printf("%#v\n", instance)
 			}
 			instanceStore.Delete(instance)
 			printInstances(stdout, instanceStore.List())
@@ -168,7 +179,7 @@ func newStore(informer informermanagementv1.DevPodWorkspaceInstanceInformer, sel
 }
 
 func (s *instanceStore) key(meta metav1.ObjectMeta) string {
-	return fmt.Sprintf("%s/%s", meta.Name, meta.Namespace)
+	return fmt.Sprintf("%s/%s", meta.Namespace, meta.Name)
 }
 
 func (s *instanceStore) Add(instance *managementv1.DevPodWorkspaceInstance) {
@@ -211,21 +222,29 @@ func (s *instanceStore) Update(oldInstance *managementv1.DevPodWorkspaceInstance
 }
 
 func (s *instanceStore) Delete(instance *managementv1.DevPodWorkspaceInstance) {
+	fmt.Println("Delete")
+	fmt.Println("filterByOwner", s.filterByOwner)
 	if s.filterByOwner && !platform.IsOwner(s.self, instance.Spec.Owner) {
 		return
 	}
 
+	// TODO: Something is off here :(
 	s.m.Lock()
 	defer s.m.Unlock()
 	key := s.key(instance.ObjectMeta)
+	fmt.Println(key)
+	for k, v := range s.instances {
+		fmt.Println(k, v.GetName())
+	}
+
 	delete(s.instances, key)
 }
 
 func (s *instanceStore) List() []*ProWorkspaceInstance {
 	instanceList := []*ProWorkspaceInstance{}
 	// Check local imported workspaces
-	// Eventually this should be moved to filtering by ownership and access on the CRD, for now we're stuck with this approach...
-	localWorkspaces, err := workspace.ListLocalWorkspaces(s.context, s.log)
+	// Eventually this should be implemented by filtering based on ownership and access on the CRD, for now we're stuck with this approach...
+	localWorkspaces, err := workspace.ListLocalWorkspaces(s.context, false, s.log)
 	if err == nil {
 		for _, workspace := range localWorkspaces {
 			if workspace.Imported && workspace.Pro != nil {
@@ -294,10 +313,14 @@ func (s *instanceStore) List() []*ProWorkspaceInstance {
 }
 
 func printInstances(w io.Writer, instances []*ProWorkspaceInstance) {
-	out, err := json.Marshal(instances)
-	if err != nil {
-		return
-	}
+	// out, err := json.Marshal(instances)
+	// if err != nil {
+	// 	return
+	// }
+	//
+	// fmt.Fprintln(w, string(out))
 
-	fmt.Fprintln(w, string(out))
+	for _, i := range instances {
+		fmt.Fprintln(w, i.GetName())
+	}
 }

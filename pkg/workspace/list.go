@@ -24,7 +24,7 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log lo
 	workspaces := map[string]*providerpkg.Workspace{}
 
 	// list local workspaces
-	localWorkspaces, err := ListLocalWorkspaces(devPodConfig.DefaultContext, log)
+	localWorkspaces, err := ListLocalWorkspaces(devPodConfig.DefaultContext, skipPro, log)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log lo
 			return nil, err
 		}
 	}
-	// merge remote into local, taking precedence if UID matches
+	// merge pro into local with pro taking precedence if UID matches
 	for _, workspace := range append(localWorkspaces, proWorkspaces...) {
 		workspaces[workspace.UID] = workspace
 	}
@@ -50,7 +50,7 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log lo
 	return retWorkspaces, nil
 }
 
-func ListLocalWorkspaces(contextName string, log log.Logger) ([]*providerpkg.Workspace, error) {
+func ListLocalWorkspaces(contextName string, skipPro bool, log log.Logger) ([]*providerpkg.Workspace, error) {
 	workspaceDir, err := providerpkg.GetWorkspacesDir(contextName)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func ListLocalWorkspaces(contextName string, log log.Logger) ([]*providerpkg.Wor
 			continue
 		}
 
-		if workspaceConfig.IsPro() {
+		if skipPro && workspaceConfig.IsPro() {
 			continue
 		}
 

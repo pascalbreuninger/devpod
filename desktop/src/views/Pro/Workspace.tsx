@@ -23,7 +23,6 @@ import {
 } from "@/icons"
 import {
   Annotations,
-  Labels,
   Source,
   TProInstanceDetail,
   getActionDisplayName,
@@ -93,7 +92,6 @@ export function Workspace() {
   const { data: projectClusters } = useProjectClusters()
   const { host } = useProContext()
   const navigate = useNavigate()
-  console.log(params)
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
   const instanceDisplayName = getDisplayName(instance)
@@ -103,8 +101,8 @@ export function Workspace() {
   const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
     useCallback(
       (close) => {
-        close()
         workspace.stop()
+        close()
       },
       [workspace]
     )
@@ -113,20 +111,18 @@ export function Workspace() {
     instanceDisplayName,
     useCallback(
       (force, close) => {
-        console.log(force)
         workspace.remove(force)
         close()
-        navigate(Routes.toProInstance(host))
       },
-      [workspace, host, navigate]
+      [workspace]
     )
   )
   const { modal: rebuildModal, open: openRebuildModal } = useRebuildWorkspaceModal(
     instanceDisplayName,
     useCallback(
       (close) => {
-        close()
         workspace.rebuild()
+        close()
       },
       [workspace]
     )
@@ -135,8 +131,8 @@ export function Workspace() {
     instanceDisplayName,
     useCallback(
       (close) => {
-        close()
         workspace.reset()
+        close()
       },
       [workspace]
     )
@@ -177,6 +173,13 @@ export function Workspace() {
     })
   }
 
+  // navigate to pro instance view after successfully deleting the workspace
+  useEffect(() => {
+    if (workspace.current?.name === "remove" && workspace.current.status === "success") {
+      navigate(Routes.toProInstance(host))
+    }
+  }, [host, navigate, workspace])
+
   if (!instance) {
     return (
       <VStack align="start" gap="4">
@@ -202,7 +205,6 @@ export function Workspace() {
   const sourceInfo = getSourceInfo(
     Source.fromRaw(instance.metadata?.annotations?.[Annotations.WorkspaceSource])
   )
-  const uid = instance.metadata?.labels?.[Labels.WorkspaceUID]
 
   const lastActivity = getLastActivity(instance)
 
@@ -229,9 +231,7 @@ export function Workspace() {
               icon={Status}
               label={
                 <HStack whiteSpace="nowrap" wordBreak={"keep-all"}>
-                  <Text>
-                    ID/UID: {instance.id}/{uid}
-                  </Text>
+                  <Text>ID: {instance.id}</Text>
                 </HStack>
               }
             />
@@ -306,7 +306,6 @@ function Logs({ host, workspace, instance }: TTabProps) {
   const lastActionIDRef = useRef<string | null>(null)
   const actionHoverColor = useColorModeValue("gray.100", "gray.800")
   const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
-  const { download, isDownloading } = useDownloadLogs()
 
   const location = useLocation()
 
@@ -383,18 +382,7 @@ function Logs({ host, workspace, instance }: TTabProps) {
                     )}
                   </VStack>
 
-                  <Tooltip label="Save Logs">
-                    <IconButton
-                      ml="auto"
-                      mr="4"
-                      isLoading={isDownloading}
-                      title="Save Logs"
-                      variant="outline"
-                      aria-label="Save Logs"
-                      icon={<DownloadIcon />}
-                      onClick={() => download({ actionID: action.id })}
-                    />
-                  </Tooltip>
+                  <DownloadLogsButton actionID={action.id} />
                 </LinkBox>
               )
             })}
@@ -469,5 +457,25 @@ function formatTemplateDetail(
     <Text>
       {templateDisplayName}/{templateVersion}
     </Text>
+  )
+}
+
+type TDownloadLogsButtonProps = Readonly<{ actionID: string }>
+function DownloadLogsButton({ actionID }: TDownloadLogsButtonProps) {
+  const { download, isDownloading } = useDownloadLogs()
+
+  return (
+    <Tooltip label="Save Logs">
+      <IconButton
+        ml="auto"
+        mr="4"
+        isLoading={isDownloading}
+        title="Save Logs"
+        variant="outline"
+        aria-label="Save Logs"
+        icon={<DownloadIcon />}
+        onClick={() => download({ actionID })}
+      />
+    </Tooltip>
   )
 }

@@ -121,12 +121,12 @@ export function CreateWorkspaceForm({
           <FormControl isInvalid={exists(defaultIDEError)}>
             <CreateWorkspaceRow
               label={
-                <VStack align="start">
+                <VStack gap="1" align="start">
                   <FormLabel>
                     <Laptop boxSize={5} mr="1" />
                     Default IDE
                   </FormLabel>
-                  <FormHelperText>
+                  <FormHelperText mt="0">
                     The default IDE to use when starting the workspace. This can be changed later.
                   </FormHelperText>
                 </VStack>
@@ -147,12 +147,12 @@ export function CreateWorkspaceForm({
           <FormControl isDisabled={!!instance} isInvalid={exists(devcontainerJSONError)}>
             <CreateWorkspaceRow
               label={
-                <VStack align="start">
+                <VStack gap="1" align="start">
                   <FormLabel>
                     <Laptop boxSize={5} mr="1" />
                     Devcontainer.json
                   </FormLabel>
-                  <FormHelperText>
+                  <FormHelperText mt="0">
                     Set an external source or a relative path in the source code. Otherwise, we’ll
                     look in the code repository.
                   </FormHelperText>

@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query"
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
 import { Link as RouterLink, useNavigate } from "react-router-dom"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
-import { ContextPicker, HOST_OSS } from "./ContextPicker"
+import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
 
 type TProContext = Readonly<{
   managementSelf: ManagementV1Self
@@ -80,6 +80,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
 
   const handleProjectChanged = (newProject: ManagementV1Project) => {
     setSelectedProject(newProject)
+    navigate(Routes.toProInstance(host))
   }
 
   const handleHostChanged = (newHost: string) => {
@@ -112,7 +113,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     <ProContext.Provider value={value}>
       <ToolbarTitle>{host}</ToolbarTitle>
       <ToolbarActions>
-        <ContextPicker
+        <ContextSwitcher
           currentHost={host}
           onHostChange={handleHostChanged}
           projects={projects ?? []}

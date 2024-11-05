@@ -145,7 +145,6 @@ export class WorkspacesClient implements TDebuggable {
     ctx: TWorkspaceClientContext
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.StartWorkspace(ctx.id, config)
-    console.log(cmd)
     const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "start" })
     if (result.err) {
       return result

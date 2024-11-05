@@ -25,7 +25,6 @@ function init(): TDebug & TInternalDebug {
       const current = (await store.get(option)) ?? false
       const newOptionValue = !current
       await store.set(option, newOptionValue)
-      console.log("debug", newOptionValue)
     },
     async get(option) {
       return (await store.get(option)) ?? false

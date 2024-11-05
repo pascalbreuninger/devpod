@@ -49,8 +49,6 @@ export function OptionsInput({
     return currentTemplate?.spec?.versions?.slice().sort(sortByVersionDesc)
   }, [currentTemplate?.spec?.versions])
 
-  console.log(getValues())
-
   return (
     <VStack
       align="start"

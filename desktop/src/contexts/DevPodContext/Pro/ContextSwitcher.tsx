@@ -20,7 +20,7 @@ import {
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ReactNode, useMemo } from "react"
 import { useProInstances } from "../proInstances"
-import { ArrowUpDownIcon } from "@chakra-ui/icons"
+import { ArrowUpDownIcon, CheckIcon } from "@chakra-ui/icons"
 
 export const HOST_OSS = "Open Source"
 type THostPickerProps = Readonly<{
@@ -31,7 +31,7 @@ type THostPickerProps = Readonly<{
   projects: readonly ManagementV1Project[]
   onProjectChange: (newProject: ManagementV1Project) => void
 }>
-export function ContextPicker({
+export function ContextSwitcher({
   currentHost,
   projects,
   currentProject,
@@ -41,7 +41,19 @@ export function ContextPicker({
   const [[rawProInstances]] = useProInstances()
   const proInstances = useMemo(() => {
     const p: (TProInstance & { image?: string | ReactNode })[] =
-      rawProInstances?.map((proInstance) => ({ ...proInstance })) ?? []
+      rawProInstances
+        ?.slice()
+        .sort((a, b) => {
+          if (a.host === currentHost) {
+            return -1
+          }
+          if (b.host === currentHost) {
+            return 1
+          }
+
+          return 0
+        })
+        .map((proInstance) => ({ ...proInstance })) ?? []
 
     p.push({
       host: HOST_OSS,
@@ -52,7 +64,7 @@ export function ContextPicker({
     })
 
     return p
-  }, [rawProInstances])
+  }, [currentHost, rawProInstances])
 
   return (
     <Popover>
@@ -104,7 +116,6 @@ export function ContextPicker({
                     <VStack
                       w="full"
                       align="start"
-                      bg="blue.50"
                       py="4"
                       borderWidth="thin"
                       borderRightWidth="0"
@@ -114,28 +125,28 @@ export function ContextPicker({
                         Projects
                       </Heading>
                       <List w="full">
-                        {projects.map((project) => {
-                          if (project.metadata?.name === currentProject.metadata?.name) {
-                            return null
-                          }
-
-                          return (
-                            <ListItem key={project.metadata!.name}>
-                              <Button
-                                variant="unstyled"
-                                w="full"
-                                display="flex"
-                                justifyContent="start"
-                                leftIcon={<Folder boxSize={5} />}
-                                pl="4"
-                                color="gray.700"
-                                fontWeight="normal"
-                                onClick={() => onProjectChange(project)}>
-                                {getDisplayName(project)}
-                              </Button>
-                            </ListItem>
-                          )
-                        })}
+                        {projects.map((project) => (
+                          <ListItem key={project.metadata!.name}>
+                            <Button
+                              _hover={{ bgColor: "gray.100" }}
+                              variant="unstyled"
+                              w="full"
+                              display="flex"
+                              justifyContent="start"
+                              leftIcon={<Folder boxSize={5} />}
+                              pl="4"
+                              color="gray.700"
+                              fontWeight="normal"
+                              rightIcon={
+                                project.metadata?.name === currentProject.metadata?.name ? (
+                                  <CheckIcon ml="auto" mr="5" />
+                                ) : undefined
+                              }
+                              onClick={() => onProjectChange(project)}>
+                              {getDisplayName(project)}
+                            </Button>
+                          </ListItem>
+                        ))}
                       </List>
                     </VStack>
                   )}

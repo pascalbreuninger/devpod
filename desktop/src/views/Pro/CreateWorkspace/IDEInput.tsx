@@ -46,7 +46,9 @@ function IDECard({ name, isSelected, icon, onClick }: TIDECardProps) {
         <Text fontWeight="medium" color="gray.700">
           SSH
         </Text>
-        <InfoIcon ml="-0.5" color="gray.600" />
+        <Tooltip label="Selecting SSH only adds an entry in the form of `$workspace.devpod` to your SSH configuration. You can connect to it using your terminal or IDEs that aren't supported by DevPod but support SSH connections.">
+          <InfoIcon ml="-0.5" color="gray.600" />
+        </Tooltip>
       </HStack>
     )
   } else {
