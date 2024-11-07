@@ -60,7 +60,9 @@ export type TProviderConfig = Readonly<{
   options: TProviderOptions
   icon: TMaybe<string>
   home: TMaybe<string>
-  exec: TMaybe<Record<string, readonly string[]>>
+  exec:
+    | TMaybe<Record<string, readonly string[]> & { proxy: never }>
+    | TMaybe<{ proxy: TMaybe<Record<string, readonly string[]>> }>
 }>
 export type TProviderOptionGroup = Readonly<{
   name: TMaybe<string>
@@ -252,6 +254,11 @@ export type TListProInstancesConfig = Readonly<
     }
   | undefined
 >
+export type TPlatformVersionInfo = Readonly<{
+  serverVersion: TMaybe<string>
+  remoteProviderVersion: TMaybe<string>
+  currentProviderVersion: TMaybe<string>
+}>
 //#endregion
 
 export type TDevcontainerSetup = Readonly<{

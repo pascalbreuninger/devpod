@@ -23,10 +23,9 @@ type WatchWorkspacesCmd struct {
 	Log log.Logger
 
 	Host          string
+	Project       string
 	FilterByOwner bool
 }
-
-// TODO: also list imported workspaces...
 
 // NewWatchWorkspacesCmd creates a new command
 func NewWatchWorkspacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
@@ -45,6 +44,8 @@ func NewWatchWorkspacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	c.Flags().StringVar(&cmd.Host, "host", "", "The pro instance to use")
 	_ = c.MarkFlagRequired("host")
+	c.Flags().StringVar(&cmd.Project, "project", "", "The project to use")
+	_ = c.MarkFlagRequired("project")
 	c.Flags().BoolVar(&cmd.FilterByOwner, "filter-by-owner", true, "If true only shows workspaces of current owner")
 
 	return c
@@ -72,6 +73,7 @@ func (cmd *WatchWorkspacesCmd) Run(ctx context.Context) error {
 	if cmd.FilterByOwner {
 		opts[providerpkg.LOFT_FILTER_BY_OWNER] = config.OptionValue{Value: "true"}
 	}
+	opts[providerpkg.LOFT_PROJECT] = config.OptionValue{Value: cmd.Project}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT)
@@ -84,7 +86,7 @@ func (cmd *WatchWorkspacesCmd) Run(ctx context.Context) error {
 	// ignore --debug because we tunnel json through stdio
 	cmd.Log.SetLevel(logrus.InfoLevel)
 
-	if err := clientimplementation.RunCommandWithBinaries(
+	err = clientimplementation.RunCommandWithBinaries(
 		cancelCtx,
 		"watchWorkspaces",
 		provider.Exec.Proxy.Watch.Workspaces,
@@ -97,7 +99,8 @@ func (cmd *WatchWorkspacesCmd) Run(ctx context.Context) error {
 		nil,
 		os.Stdout,
 		log.Default.ErrorStreamOnly().Writer(logrus.ErrorLevel, false),
-		cmd.Log); err != nil {
+		cmd.Log)
+	if err != nil {
 		return fmt.Errorf("watch workspaces with provider \"%s\": %w", provider.Name, err)
 	}
 

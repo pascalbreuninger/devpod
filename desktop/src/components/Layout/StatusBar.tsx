@@ -22,20 +22,33 @@ import { Debug, useArch, useDebug, usePlatform, useVersion } from "../../lib"
 
 export function StatusBar(boxProps: BoxProps) {
   return (
-    <HStack justify="space-between" paddingX="6" fontSize="sm" zIndex="overlay" {...boxProps} />
+    <HStack
+      justify="space-between"
+      paddingX="6"
+      fontSize="sm"
+      zIndex="overlay"
+      {...boxProps}
+      color="gray.600"
+    />
   )
 }
 
 function Version() {
-  const arch = useArch()
-  const platform = usePlatform()
   const version = useVersion()
 
-  return (
-    <Text>
-      Version {version} | {platform ?? "unknown platform"} | {arch ?? "unknown arch"}
-    </Text>
-  )
+  return <Text>{version ?? "unknown version"}</Text>
+}
+
+function Platform() {
+  const platform = usePlatform()
+
+  return <Text>{platform ?? "unknown platform"}</Text>
+}
+
+function Arch() {
+  const arch = useArch()
+
+  return <Text>{arch ?? "unknown arch"}</Text>
 }
 
 function ZoomMenu() {
@@ -165,6 +178,8 @@ function useStatusBarIconColor() {
 }
 
 StatusBar.Version = Version
+StatusBar.Platform = Platform
+StatusBar.Arch = Arch
 StatusBar.ZoomMenu = ZoomMenu
 StatusBar.GitHubStar = GitHubStar
 StatusBar.OSSDocs = OSSDocs

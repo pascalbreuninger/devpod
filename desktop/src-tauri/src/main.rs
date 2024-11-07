@@ -19,7 +19,7 @@ mod logging;
 mod providers;
 mod server;
 mod settings;
-// mod system_tray;
+mod system_tray;
 mod ui_messages;
 mod ui_ready;
 mod updates;
@@ -31,8 +31,11 @@ use community_contributions::CommunityContributions;
 use custom_protocol::CustomProtocol;
 use log::{error, info};
 use std::sync::{Arc, Mutex};
-// use system_tray::SystemTray;
-use tauri::{menu::Menu, Manager, Wry};
+use system_tray::SystemTray;
+use tauri::{
+    tray::TrayIconBuilder,
+    Manager, Wry,
+};
 use tokio::sync::mpsc::{self, Sender};
 use ui_messages::UiMessage;
 use workspaces::WorkspacesState;
@@ -48,9 +51,6 @@ pub struct AppState {
     pending_update: Arc<Mutex<Option<updates::Release>>>,
     update_installed: Arc<Mutex<bool>>,
 }
-// TODO: build localhost http server
-// should have a /pro/setup endpoint and send the same UI message as the custom protocol
-
 fn main() -> anyhow::Result<()> {
     // https://unix.stackexchange.com/questions/82620/gui-apps-dont-inherit-path-from-parent-console-apps
     fix_env::fix_env("PATH")?;
@@ -61,12 +61,7 @@ fn main() -> anyhow::Result<()> {
     let ctx = tauri::generate_context!();
     let app_name = ctx.package_info().name.to_string();
 
-    // let system_tray = SystemTray::new();
-    // let system_tray_event_handler = system_tray.get_event_handler();
-
     let (tx, rx) = mpsc::channel::<UiMessage>(10);
-
-    let tx2 = tx.clone();
 
     let mut app_builder = tauri::Builder::default()
         .manage(AppState {
@@ -87,7 +82,6 @@ fn main() -> anyhow::Result<()> {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        // .system_tray(system_tray.build_tray(vec![Box::new(&WorkspacesState::default())]))
         .setup(move |app| {
             info!("Setup application");
 
@@ -97,7 +91,7 @@ fn main() -> anyhow::Result<()> {
             let window = app.get_webview_window("main").unwrap();
             window_helper.setup(&window);
 
-            // workspaces::setup(&app.handle(), app.state());
+            workspaces::setup(&app.handle(), app.state());
             community_contributions::setup(app.state());
             action_logs::setup(&app.handle())?;
             custom_protocol.setup(app.handle().clone());
@@ -128,10 +122,21 @@ fn main() -> anyhow::Result<()> {
                     .await;
             });
 
+            let system_tray = SystemTray::new();
+            let app_handle = app.handle().clone();
+            let menu =
+                system_tray.build_menu(&app_handle, Box::new(&WorkspacesState::default()))?;
+
+            let _tray = TrayIconBuilder::with_id("main")
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .menu_on_left_click(true)
+                .on_menu_event(system_tray.get_event_handler())
+                .build(app)?;
+
             info!("Setup done");
             Ok(())
         });
-    // .on_system_tray_event(system_tray_event_handler);
 
     app_builder = app_builder.invoke_handler(tauri::generate_handler![
         ui_ready::ui_ready,
@@ -152,7 +157,6 @@ fn main() -> anyhow::Result<()> {
 
     info!("Run");
 
-    let config = app.config();
     app.run(move |app_handle, event| {
         let exit_requested_tx = tx.clone();
 
@@ -164,7 +168,7 @@ fn main() -> anyhow::Result<()> {
                         error!("Failed to broadcast UI ready message: {:?}", err);
                     }
                 });
-                // FIXME: api.prevent_exit();
+                api.prevent_exit();
             }
             tauri::RunEvent::WindowEvent { event, label, .. } => {
                 if let tauri::WindowEvent::Destroyed = event {

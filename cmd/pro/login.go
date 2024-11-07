@@ -275,19 +275,6 @@ options:
     hidden: true
     required: true
     default: "${PROVIDER_FOLDER}/loft-config.json"
-    subOptionsCommand: "${PRO_PROVIDER} pro provider list projects"
-exec:
-  proxy:
-    up: |-
-      ${PRO_PROVIDER} pro provider up
-    ssh: |-
-      ${PRO_PROVIDER} pro provider ssh
-    stop: |-
-      ${PRO_PROVIDER} pro provider stop
-    status: |-
-      ${PRO_PROVIDER} pro provider status
-    delete: |-
-      ${PRO_PROVIDER} pro provider delete
 binaries:
   PRO_PROVIDER:
     - os: linux
@@ -302,4 +289,43 @@ binaries:
     - os: darwin
       arch: arm64
       path: /usr/local/bin/devpod
+exec:
+  proxy:
+    up: |-
+      ${PRO_PROVIDER} pro provider up
+    ssh: |-
+      ${PRO_PROVIDER} pro provider ssh
+    stop: |-
+      ${PRO_PROVIDER} pro provider stop
+    status: |-
+      ${PRO_PROVIDER} pro provider status
+    delete: |-
+      ${PRO_PROVIDER} pro provider delete
+    health: |-
+      ${PRO_PROVIDER} pro provider health
+    create:
+      workspace: |-
+        ${PRO_PROVIDER} pro provider create workspace
+    get:
+      workspace: |-
+        ${PRO_PROVIDER} pro provider get workspace
+      self: |-
+        ${PRO_PROVIDER} pro provider get self
+      version: |-
+        ${PRO_PROVIDER} pro provider get version
+    update:
+      workspace: |-
+        ${PRO_PROVIDER} pro provider update workspace
+    watch:
+      workspaces: |-
+        ${PRO_PROVIDER} pro provider watch workspaces
+    list:
+      workspaces: |-
+        ${PRO_PROVIDER} pro provider list workspaces
+      projects: |-
+        ${PRO_PROVIDER} pro provider list projects
+      templates: |-
+        ${PRO_PROVIDER} pro provider list templates
+      clusters: |-
+        ${PRO_PROVIDER} pro provider list clusters
 `

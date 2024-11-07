@@ -123,6 +123,7 @@ function ProPopoverContent({ proInstances, emptyProInstances }: TProPopoverConte
             return (
               <ListItem key={host}>
                 <Button
+                  _hover={{ bg: "gray.100" }}
                   variant="unstyled"
                   w="full"
                   px="4"

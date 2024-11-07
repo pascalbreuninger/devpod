@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react"
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow"
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
-import { useNavigate } from "react-router"
+import { matchPath, useNavigate } from "react-router"
 import { client } from "../client"
 import { ErrorMessageBox } from "../components"
 import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "../constants"
@@ -19,7 +19,6 @@ import { startWorkspaceAction, useChangeSettings, useWorkspaceStore } from "../c
 import { exists, useLoginProModal } from "../lib"
 import { Routes } from "../routes"
 import { useChangelogModal } from "./useChangelogModal"
-const appWindow = getCurrentWebviewWindow()
 
 export function useAppReady() {
   const { store } = useWorkspaceStore()
@@ -43,14 +42,13 @@ export function useAppReady() {
   const handleMessage: Parameters<typeof client.subscribe>[1] = useCallback(
     async (event) => {
       if (event.type === "ShowDashboard") {
-        await appWindow.setFocus()
-        navigate(Routes.WORKSPACES)
+        await getCurrentWebviewWindow().setFocus()
 
         return
       }
 
       if (event.type === "ShowToast") {
-        await appWindow.setFocus()
+        await getCurrentWebviewWindow().setFocus()
         toast({
           title: event.title,
           description: event.message,
@@ -63,7 +61,7 @@ export function useAppReady() {
       }
 
       if (event.type === "CommandFailed") {
-        await appWindow.setFocus()
+        await getCurrentWebviewWindow().setFocus()
         const message = Object.entries(event)
           .filter(([key]) => key !== "type")
           .map(([key, value]) => `${key}: ${value}`)
@@ -99,7 +97,7 @@ export function useAppReady() {
           data.suggestedOptions = event.options
         }
 
-        await appWindow.setFocus()
+        await getCurrentWebviewWindow().setFocus()
         // ensure pro is enabled
         setSetting("experimental_devPodPro", true)
         handleProLogin(data)
@@ -108,7 +106,7 @@ export function useAppReady() {
       }
 
       if (event.type === "ImportWorkspace") {
-        await appWindow.setFocus()
+        await getCurrentWebviewWindow().setFocus()
         const importResult = await client.pro.importWorkspace({
           workspaceID: event.workspace_id,
           workspaceUID: event.workspace_uid,
@@ -152,7 +150,7 @@ export function useAppReady() {
         return
       }
 
-      const workspacesResult = await client.workspaces.listAll()
+      const workspacesResult = await client.workspaces.listAll(false)
       if (workspacesResult.err) {
         return
       }
@@ -212,23 +210,47 @@ export function useAppReady() {
         defaultIDE = ides.val.find((ide) => ide.default)?.name
       }
 
-      if (maybeWorkspace !== undefined) {
+      const providerName = maybeWorkspace?.provider?.name
+      if (maybeWorkspace !== undefined && providerName) {
+        // find provider for workspace
+        const providersRes = await client.providers.listAll()
+        if (providersRes.err) return
+        const provider = providersRes.val[providerName]
+        if (!provider) return
+
+        // handle pro provider
+        if (provider.isProxyProvider && provider.config?.exec?.proxy?.health) {
+          const proInstanceRes = await client.pro.listProInstances()
+          if (proInstanceRes.err) return
+          const proInstance = proInstanceRes.val.find(
+            (proInstance) => proInstance.provider === providerName
+          )
+          if (!proInstance?.host) return
+
+          navigate(Routes.toProWorkspace(proInstance.host, maybeWorkspace.id))
+
+          return
+        }
+
         const actionID = startWorkspaceAction({
           workspaceID: maybeWorkspace.id,
           streamID: viewID,
           config: {
             id: maybeWorkspace.id,
-            providerConfig: {
-              providerID: maybeWorkspace.provider?.name ?? undefined,
-            },
-            ideConfig: {
-              name: defaultIDE ?? maybeWorkspace.ide?.name ?? null,
-            },
+            providerConfig: { providerID: providerName },
+            ideConfig: { name: defaultIDE ?? maybeWorkspace.ide?.name ?? null },
           },
           store,
         })
 
         navigate(Routes.toAction(actionID))
+
+        return
+      }
+
+      const match = matchPath(Routes.PRO_INSTANCE, location.pathname)
+      if (match && match.params.host) {
+        navigate(Routes.toProWorkspaceCreate(match.params.host))
 
         return
       }

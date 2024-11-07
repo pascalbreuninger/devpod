@@ -9,28 +9,29 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/platform"
+	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-// SelfCmd holds the cmd flags
-type SelfCmd struct {
+// VersionCmd holds the cmd flags
+type VersionCmd struct {
 	*flags.GlobalFlags
 	Log log.Logger
 
 	Host string
 }
 
-// NewSelfCmd creates a new command
-func NewSelfCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &SelfCmd{
+// NewVersionCmd creates a new command
+func NewVersionCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &VersionCmd{
 		GlobalFlags: globalFlags,
 		Log:         log.GetInstance(),
 	}
 	c := &cobra.Command{
-		Use:    "self",
-		Short:  "Get self",
+		Use:    "version",
+		Short:  "Get version",
 		Hidden: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd.Context())
@@ -43,7 +44,7 @@ func NewSelfCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	return c
 }
 
-func (cmd *SelfCmd) Run(ctx context.Context) error {
+func (cmd *VersionCmd) Run(ctx context.Context) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
@@ -55,8 +56,12 @@ func (cmd *SelfCmd) Run(ctx context.Context) error {
 	}
 
 	if !provider.IsProxyProvider() {
-		return fmt.Errorf("only pro providers can get self, provider \"%s\" is not a pro provider", provider.Name)
+		return fmt.Errorf("only pro providers can get version, provider \"%s\" is not a pro provider", provider.Name)
 	}
+
+	opts := devPodConfig.ProviderOptions(provider.Name)
+	opts[providerpkg.PROVIDER_ID] = config.OptionValue{Value: provider.Name}
+	opts[providerpkg.PROVIDER_CONTEXT] = config.OptionValue{Value: cmd.Context}
 
 	var buf bytes.Buffer
 	// ignore --debug because we tunnel json through stdio
@@ -64,12 +69,12 @@ func (cmd *SelfCmd) Run(ctx context.Context) error {
 
 	err = clientimplementation.RunCommandWithBinaries(
 		ctx,
-		"getSelf",
-		provider.Exec.Proxy.Get.Self,
+		"getVersion",
+		provider.Exec.Proxy.Get.Version,
 		devPodConfig.DefaultContext,
 		nil,
 		nil,
-		devPodConfig.ProviderOptions(provider.Name),
+		opts,
 		provider,
 		nil,
 		nil,
@@ -77,10 +82,10 @@ func (cmd *SelfCmd) Run(ctx context.Context) error {
 		nil,
 		cmd.Log)
 	if err != nil {
-		return fmt.Errorf("get self: %w", err)
+		return fmt.Errorf("get version: %w", err)
 	}
 
-	fmt.Println(buf.String())
+	fmt.Printf(buf.String())
 
 	return nil
 }

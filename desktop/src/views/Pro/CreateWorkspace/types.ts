@@ -21,7 +21,7 @@ export type TFormValues = {
 }
 
 type TOptions = {
-  workspaceTemplate: string
+  workspaceTemplate?: string
   workspaceTemplateVersion?: string
   [key: string]: string | Record<string, unknown> | undefined
 }

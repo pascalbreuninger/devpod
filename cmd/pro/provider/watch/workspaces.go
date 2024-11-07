@@ -2,6 +2,7 @@ package watch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -41,7 +42,7 @@ func NewWorkspacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	}
 	c := &cobra.Command{
 		Use:    "workspaces",
-		Short:  "Watches all workspaces",
+		Short:  "Watches all workspaces for a project",
 		Hidden: true,
 		Args:   cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
@@ -72,6 +73,11 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wr
 		cmd.Context = config.DefaultContext
 	}
 
+	projectName := os.Getenv(provider.LOFT_PROJECT)
+	if projectName == "" {
+		return fmt.Errorf("project name not found")
+	}
+
 	baseClient, err := client.InitClientFromPath(ctx, cmd.Config)
 	if err != nil {
 		return err
@@ -87,7 +93,9 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wr
 		return err
 	}
 
-	factory := informers.NewSharedInformerFactory(clientset, time.Second*10)
+	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*10,
+		informers.WithNamespace(project.ProjectNamespace(projectName)),
+	)
 	workspaceInformer := factory.Management().V1().DevPodWorkspaceInstances()
 
 	self := baseClient.Self()
@@ -116,21 +124,17 @@ func (cmd *WorkspacesCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wr
 			printInstances(stdout, instanceStore.List())
 		},
 		DeleteFunc: func(obj interface{}) {
-			fmt.Println("DeleteFunc")
-			fmt.Printf("%#v\n", obj)
 			instance, ok := obj.(*managementv1.DevPodWorkspaceInstance)
 			if !ok {
 				// check for DeletedFinalStateUnknown. Can happen if the informer misses the delete event
-				u, ok := obj.(*cache.DeletedFinalStateUnknown)
+				u, ok := obj.(cache.DeletedFinalStateUnknown)
 				if !ok {
 					return
 				}
-				fmt.Printf("%#v\n", u)
 				instance, ok = u.Obj.(*managementv1.DevPodWorkspaceInstance)
 				if !ok {
 					return
 				}
-				fmt.Printf("%#v\n", instance)
 			}
 			instanceStore.Delete(instance)
 			printInstances(stdout, instanceStore.List())
@@ -222,21 +226,13 @@ func (s *instanceStore) Update(oldInstance *managementv1.DevPodWorkspaceInstance
 }
 
 func (s *instanceStore) Delete(instance *managementv1.DevPodWorkspaceInstance) {
-	fmt.Println("Delete")
-	fmt.Println("filterByOwner", s.filterByOwner)
 	if s.filterByOwner && !platform.IsOwner(s.self, instance.Spec.Owner) {
 		return
 	}
 
-	// TODO: Something is off here :(
 	s.m.Lock()
 	defer s.m.Unlock()
 	key := s.key(instance.ObjectMeta)
-	fmt.Println(key)
-	for k, v := range s.instances {
-		fmt.Println(k, v.GetName())
-	}
-
 	delete(s.instances, key)
 }
 
@@ -313,14 +309,10 @@ func (s *instanceStore) List() []*ProWorkspaceInstance {
 }
 
 func printInstances(w io.Writer, instances []*ProWorkspaceInstance) {
-	// out, err := json.Marshal(instances)
-	// if err != nil {
-	// 	return
-	// }
-	//
-	// fmt.Fprintln(w, string(out))
-
-	for _, i := range instances {
-		fmt.Fprintln(w, i.GetName())
+	out, err := json.Marshal(instances)
+	if err != nil {
+		return
 	}
+
+	fmt.Fprintln(w, string(out))
 }

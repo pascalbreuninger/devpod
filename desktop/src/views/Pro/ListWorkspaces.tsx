@@ -12,55 +12,22 @@ import {
   List,
   ListItem,
   Spinner,
-  VStack,
   Text,
+  VStack,
 } from "@chakra-ui/react"
-import { getProjectNamespace } from "@loft-enterprise/client"
-import { useMemo } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceInstanceCard } from "./WorkspaceInstanceCard"
 
 export function ListWorkspaces() {
   const instances = useWorkspaces<ProWorkspaceInstance>()
-  const { host, currentProject, managementSelf, isLoading } = useProContext()
+  const { host, isLoading } = useProContext()
   const navigate = useNavigate()
 
   const handleCreateClicked = () => {
     navigate(Routes.toProWorkspaceCreate(host))
   }
 
-  const projectInstances = useMemo(() => {
-    const currentProjectNs = getProjectNamespace(
-      currentProject.metadata!.name!,
-      managementSelf.status?.projectNamespacePrefix
-    )
-
-    return instances.reduce(
-      (acc, instance) => {
-        if (instance.metadata?.namespace !== currentProjectNs) {
-          return acc
-        }
-
-        const owner = instance.spec?.owner
-        if (
-          (owner?.user && owner.user === managementSelf.status?.user?.name) ||
-          (owner?.team && owner.team === managementSelf.status?.team?.name)
-        ) {
-          acc.currentUser.push(instance)
-
-          return acc
-        }
-
-        acc.others.push(instance)
-
-        return acc
-      },
-      { currentUser: [] as ProWorkspaceInstance[], others: [] as ProWorkspaceInstance[] }
-    )
-  }, [currentProject, instances, managementSelf])
-
-  const hasWorkspaces =
-    projectInstances.currentUser.length > 0 || projectInstances.others.length > 0
+  const hasWorkspaces = instances.length > 0
 
   return (
     <VStack align="start" gap="4" w="full" h="full">
@@ -77,7 +44,7 @@ export function ListWorkspaces() {
             </Button>
           </HStack>
           <List w="full" mb="4">
-            {projectInstances.currentUser.map((instance) => (
+            {instances.map((instance) => (
               <ListItem key={instance.id}>
                 <WorkspaceInstanceCard host={host} instanceName={instance.id} />
               </ListItem>

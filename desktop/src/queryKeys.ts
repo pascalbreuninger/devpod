@@ -44,6 +44,9 @@ export const QueryKeys = {
   connectionStatus(host: string): string[] {
     return ["connectionStatus", host]
   },
+  versionInfo(host: string): string[] {
+    return ["versionInfo", host]
+  },
 }
 
 export const MutationKeys = {

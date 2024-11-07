@@ -12,8 +12,8 @@ import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
 
 type TProContext = Readonly<{
-  managementSelf: ManagementV1Self
-  currentProject: ManagementV1Project
+  managementSelf?: ManagementV1Self
+  currentProject?: ManagementV1Project
   host: string
   client: ProClient
   isLoading: boolean
@@ -49,34 +49,31 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   }, [projects, selectedProject])
 
   useEffect(() => {
+    if (!currentProject?.metadata?.name) {
+      return
+    }
     setIsLoading(true)
 
-    return client.watchWorkspaces(
-      (workspaces) => {
-        // sort by last activity (newest > oldest)
-        const sorted = workspaces.slice().sort((a, b) => {
-          const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
-          const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
-          if (!(lastActivityA && lastActivityB)) {
-            return 0
-          }
+    // TODO: Check connection error!
 
-          return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
-        })
-        store.setWorkspaces(sorted)
-        // dirty, dirty
-        setTimeout(() => {
-          setIsLoading(false)
-        }, 1_000)
-      },
-      (err) => {
-        if (!err.message.startsWith("Command already cancelled")) {
-          setConnectionError(err)
-          setIsLoading(false)
+    return client.watchWorkspaces(currentProject.metadata.name, (workspaces) => {
+      // sort by last activity (newest > oldest)
+      const sorted = workspaces.slice().sort((a, b) => {
+        const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+        const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+        if (!(lastActivityA && lastActivityB)) {
+          return 0
         }
-      }
-    )
-  }, [client, store])
+
+        return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
+      })
+      store.setWorkspaces(sorted)
+      // dirty, dirty
+      setTimeout(() => {
+        setIsLoading(false)
+      }, 1_000)
+    })
+  }, [client, store, currentProject])
 
   const handleProjectChanged = (newProject: ManagementV1Project) => {
     setSelectedProject(newProject)
@@ -94,17 +91,9 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   }
 
   const value = useMemo<TProContext>(() => {
-    if (!managementSelf || !currentProject) {
-      return null!
-    }
-
     return { managementSelf, currentProject, host, client, isLoading }
   }, [currentProject, managementSelf, host, client, isLoading])
 
-  // TODO: handle properly
-  if ((!managementSelf || !currentProject) && !connectionError) {
-    return null
-  }
   if (connectionError) {
     return <ConnectionErrorBox error={connectionError} host={host} client={client} />
   }

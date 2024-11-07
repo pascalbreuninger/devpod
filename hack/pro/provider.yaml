@@ -52,6 +52,8 @@ exec:
         ${PRO_PROVIDER} pro provider get workspace
       self: |-
         ${PRO_PROVIDER} pro provider get self
+      version: |-
+        ${PRO_PROVIDER} pro provider get version
     update:
       workspace: |-
         ${PRO_PROVIDER} pro provider update workspace

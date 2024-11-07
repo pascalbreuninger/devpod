@@ -69,6 +69,7 @@
     "core:window:default",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
+    "core:window:allow-set-focus",
     "notification:default",
     "store:allow-load",
     "store:default",

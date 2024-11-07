@@ -16,7 +16,7 @@ import {
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo } from "react"
-import { Outlet, useMatch, useNavigate, Link as RouterLink } from "react-router-dom"
+import { Outlet, Link as RouterLink, useMatch, useNavigate } from "react-router-dom"
 import { useBorderColor } from "../Theme"
 import {
   Notifications,
@@ -36,8 +36,8 @@ import { showTitleBar, titleBarSafeArea } from "./constants"
 import { useAppReady } from "./useAppReady"
 
 export function OSSApp() {
-  const { errorModal, changelogModal, proLoginModal } = useAppReady()
   const navigate = useNavigate()
+  const { errorModal, changelogModal, proLoginModal } = useAppReady()
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
@@ -184,6 +184,8 @@ export function OSSApp() {
                     backgroundColor={contentBackgroundColor}>
                     <HStack>
                       <StatusBar.Version />
+                      <StatusBar.Platform />
+                      <StatusBar.Arch />
                     </HStack>
 
                     <HStack>

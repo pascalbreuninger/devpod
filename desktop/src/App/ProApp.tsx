@@ -1,11 +1,22 @@
+import { STATUS_BAR_HEIGHT } from "@/constants"
+import { BellDuotone, CogDuotone } from "@/icons"
 import { QueryKeys } from "@/queryKeys"
-import { Box, HStack, Text, Link, useColorModeValue, IconButton } from "@chakra-ui/react"
+import { Routes } from "@/routes"
+import { TPlatformVersionInfo } from "@/types"
+import {
+  Box,
+  Divider,
+  HStack,
+  IconButton,
+  Link,
+  Text,
+  Tooltip,
+  useColorModeValue,
+} from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { Outlet, Link as RouterLink } from "react-router-dom"
-import { Notifications, StatusBar, Toolbar, ProLayout } from "../components"
-import { BellDuotone, CogDuotone } from "@/icons"
-import { Routes } from "@/routes"
+import { Notifications, ProLayout, StatusBar, Toolbar } from "../components"
 import {
   ProInstancesProvider,
   ProProvider,
@@ -40,6 +51,7 @@ export function ProApp() {
 type TProAppContentProps = Readonly<{ host: string }>
 function ProAppContent({ host }: TProAppContentProps) {
   const connectionStatus = useConnectionStatus()
+  const versionInfo = usePlatformVersion()
   const iconColor = useColorModeValue("primary.600", "primary.400")
 
   return (
@@ -74,9 +86,31 @@ function ProAppContent({ host }: TProAppContentProps) {
       statusBarItems={
         <>
           <HStack />
-          <HStack>
-            <StatusBar.Version />
+          <HStack gap="1">
+            <Tooltip label="Client version">
+              <Tooltip label=" version">
+                <StatusBar.Version />
+              </Tooltip>
+            </Tooltip>
+            {versionInfo?.currentProviderVersion && (
+              <Tooltip label="Provider version">
+                <Text>
+                  {versionInfo.currentProviderVersion}
+                  {versionInfo.currentProviderVersion !== versionInfo.remoteProviderVersion
+                    ? `/${versionInfo.remoteProviderVersion}`
+                    : ""}
+                </Text>
+              </Tooltip>
+            )}
+            {versionInfo?.serverVersion && (
+              <Tooltip label="Platform version">
+                <Text>{versionInfo.serverVersion}</Text>
+              </Tooltip>
+            )}
+            <StatusBar.Platform />
+            <StatusBar.Arch />
             <StatusBar.DebugMenu />
+            <Divider orientation="vertical" h={STATUS_BAR_HEIGHT} mx="2" />
             {!connectionStatus.isLoading && (
               <HStack gap="1">
                 <Box
@@ -123,4 +157,17 @@ export function useConnectionStatus(): TConnectionStatus {
   })
 
   return { ...connection, isLoading }
+}
+
+function usePlatformVersion(): TPlatformVersionInfo | undefined {
+  const { host, client } = useProContext()
+  const { data } = useQuery({
+    queryKey: QueryKeys.versionInfo(host),
+    queryFn: async () => {
+      return (await client.getVersion()).unwrap()
+    },
+    refetchInterval: 1_000 * 60, // every minute
+  })
+
+  return data
 }

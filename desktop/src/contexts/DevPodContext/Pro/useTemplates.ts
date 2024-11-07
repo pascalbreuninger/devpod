@@ -13,10 +13,10 @@ export function useTemplates(): UseQueryResult<TTemplates> {
   const { host, currentProject, client } = useProContext()
   const query = useQuery<TTemplates>({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: QueryKeys.proWorkspaceTemplates(host, currentProject.metadata!.name!),
+    queryKey: QueryKeys.proWorkspaceTemplates(host, currentProject?.metadata!.name!),
     queryFn: async () => {
       const projectTemplates = (
-        await client.getProjectTemplates(currentProject.metadata!.name!)
+        await client.getProjectTemplates(currentProject?.metadata!.name!)
       ).unwrap()
 
       // try to find default template in list
@@ -33,6 +33,7 @@ export function useTemplates(): UseQueryResult<TTemplates> {
         environment: projectTemplates?.devPodEnvironmentTemplates ?? [],
       }
     },
+    enabled: !!currentProject,
   })
 
   return query

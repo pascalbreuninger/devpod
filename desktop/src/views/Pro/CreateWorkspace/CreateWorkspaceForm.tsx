@@ -25,7 +25,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
-import { ReactNode, useEffect, useRef } from "react"
+import { ReactNode, useEffect, useMemo, useRef } from "react"
 import { Controller, DefaultValues, FormProvider, useForm } from "react-hook-form"
 import { DevContainerInput } from "./DevContainerInput"
 import { IDEInput } from "./IDEInput"
@@ -48,13 +48,11 @@ export function CreateWorkspaceForm({
   onReset,
   error,
 }: TCreateWorkspaceFormProps) {
+  const defaultValues = useMemo(() => getDefaultValues(instance, template), [instance, template])
   const containerRef = useRef<HTMLDivElement>(null)
   const { ides, defaultIDE } = useIDEs()
   const { data: templates, isLoading: isTemplatesLoading } = useTemplates()
-  const form = useForm<TFormValues>({
-    mode: "onChange",
-    defaultValues: getDefaultValues(instance, template),
-  })
+  const form = useForm<TFormValues>({ mode: "onChange", defaultValues })
   const { sourceError, defaultIDEError, nameError, devcontainerJSONError, optionsError } =
     useFormErrors(Object.values(FieldName), form.formState)
 
@@ -68,7 +66,7 @@ export function CreateWorkspaceForm({
   }, [defaultIDE, form])
 
   return (
-    <Form h="full" onSubmit={form.handleSubmit(onSubmit)} onReset={onReset}>
+    <Form onSubmit={form.handleSubmit(onSubmit)}>
       <FormProvider {...form}>
         <VStack w="full" gap="8" ref={containerRef}>
           <FormControl isDisabled={!!instance} isRequired isInvalid={exists(sourceError)}>
@@ -79,7 +77,7 @@ export function CreateWorkspaceForm({
                   Source Code
                 </FormLabel>
               }>
-              <SourceInput />
+              <SourceInput isDisabled={!!instance} />
 
               {exists(sourceError) && (
                 <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
@@ -95,22 +93,14 @@ export function CreateWorkspaceForm({
                   Parameters
                 </FormLabel>
               }>
-              <Controller
-                control={form.control}
-                name={FieldName.OPTIONS}
-                render={() => {
-                  if (isTemplatesLoading) {
-                    return <Spinner />
-                  }
-
-                  return (
-                    <OptionsInput
-                      workspaceTemplates={templates!.workspace}
-                      defaultWorkspaceTemplate={templates!.default}
-                    />
-                  )
-                }}
-              />
+              {isTemplatesLoading ? (
+                <Spinner />
+              ) : (
+                <OptionsInput
+                  workspaceTemplates={templates!.workspace}
+                  defaultWorkspaceTemplate={templates!.default}
+                />
+              )}
 
               {exists(optionsError) && (
                 <FormErrorMessage>{optionsError.message ?? "Error"}</FormErrorMessage>
@@ -182,10 +172,25 @@ export function CreateWorkspaceForm({
             </CreateWorkspaceRow>
           </FormControl>
 
-          <BottomActionBar hasSidebar={false}>
+          <BottomActionBar hasSidebar={false} stickToBottom>
             <BottomActionBarError error={error} containerRef={containerRef} />
             <ButtonGroup marginLeft="auto">
-              <Button type="reset">{instance ? "Reset Changes" : "Cancel"} </Button>
+              <Button
+                onClick={() => {
+                  console.log(defaultValues)
+                  form.reset(defaultValues, {
+                    keepValues: false,
+                    keepDefaultValues: true,
+                    keepDirty: false,
+                    keepTouched: false,
+                    keepErrors: false,
+                    keepDirtyValues: false,
+                    keepIsValid: false,
+                  })
+                  onReset()
+                }}>
+                {instance ? "Reset Changes" : "Cancel"}{" "}
+              </Button>
               <Button
                 type="submit"
                 isLoading={form.formState.isSubmitting}
@@ -224,7 +229,9 @@ function getDefaultValues(
   if (instance === undefined) {
     return undefined
   }
-  const defaultValues: DefaultValues<TFormValues> = {}
+  const defaultValues: DefaultValues<TFormValues> = {
+    defaultIDE: instance.status?.ide?.name ?? "none",
+  }
 
   // source
   const rawSource = instance.metadata?.annotations?.[Annotations.WorkspaceSource]

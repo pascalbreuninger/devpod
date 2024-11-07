@@ -27,10 +27,9 @@ func NewSelfCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Log:         log.GetInstance(),
 	}
 	c := &cobra.Command{
-		Use:    "self",
-		Short:  "Get self",
-		Hidden: true,
-		Args:   cobra.NoArgs,
+		Use:   "self",
+		Short: "Get self",
+		Args:  cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(cobraCmd.Context(), os.Stdin, os.Stdout, os.Stderr)
 		},

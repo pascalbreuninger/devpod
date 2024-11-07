@@ -55,6 +55,7 @@ func NewProCmd(flags *flags.GlobalFlags, streamLogger *log.StreamLogger) *cobra.
 	proCmd.AddCommand(add.NewAddCmd(globalFlags))
 	proCmd.AddCommand(NewWatchWorkspacesCmd(globalFlags))
 	proCmd.AddCommand(NewSelfCmd(globalFlags))
+	proCmd.AddCommand(NewVersionCmd(globalFlags))
 	proCmd.AddCommand(NewListProjectsCmd(globalFlags))
 	proCmd.AddCommand(NewListWorkspacesCmd(globalFlags))
 	proCmd.AddCommand(NewListTemplatesCmd(globalFlags))

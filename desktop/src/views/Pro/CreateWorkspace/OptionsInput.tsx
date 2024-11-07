@@ -18,8 +18,8 @@ import {
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import { StorageV1AppParameter } from "@loft-enterprise/client/gen/models/storageV1AppParameter"
 import { ReactNode, useMemo } from "react"
-import { ChangeHandler, useFormContext } from "react-hook-form"
-import { FieldName } from "./types"
+import { ChangeHandler, Controller, useFormContext } from "react-hook-form"
+import { FieldName, TFormValues } from "./types"
 
 type TOptionsInputProps = Readonly<{
   workspaceTemplates: readonly ManagementV1DevPodWorkspaceTemplate[]
@@ -29,7 +29,7 @@ export function OptionsInput({
   workspaceTemplates: templates,
   defaultWorkspaceTemplate,
 }: TOptionsInputProps) {
-  const { getValues, watch, resetField } = useFormContext()
+  const { getValues, watch, resetField, formState } = useFormContext<TFormValues>()
   const borderColor = useBorderColor()
 
   const defaultTemplate = defaultWorkspaceTemplate ?? templates[0]
@@ -43,11 +43,48 @@ export function OptionsInput({
     [selectedTemplateName, templates]
   )
   const currentParameters = useMemo(() => {
-    return getParameters(currentTemplate, selectedTemplateVersion)
+    let v = selectedTemplateVersion
+    if (selectedTemplateVersion === "latest") {
+      v = ""
+    }
+
+    return getParameters(currentTemplate, v)
   }, [currentTemplate, selectedTemplateVersion])
+
   const currentTemplateVersions = useMemo(() => {
     return currentTemplate?.spec?.versions?.slice().sort(sortByVersionDesc)
   }, [currentTemplate?.spec?.versions])
+
+  const resetTemplate = () => {
+    // reset all other options, including version
+    const options = getValues("options")
+    for (const [k] of Object.entries(options)) {
+      if (k === "workspaceTemplate") {
+        continue
+      }
+      if (k === "workspaceTemplateVersion") {
+        resetField(`${FieldName.OPTIONS}.workspaceTemplateVersion`, {
+          defaultValue: "latest",
+        })
+        continue
+      }
+      resetField(`${FieldName.OPTIONS}.${k}`, {})
+    }
+  }
+
+  const resetTemplateVersion = () => {
+    const resetOptions: Parameters<typeof resetField>[1] = {
+      defaultValue: undefined,
+    }
+    // reset all parameters options
+    const options = getValues("options")
+    for (const [k] of Object.entries(options)) {
+      if (k === "workspaceTemplate" || k === "workspaceTemplateVersion") {
+        continue
+      }
+      resetField(`${FieldName.OPTIONS}.${k}`, resetOptions)
+    }
+  }
 
   return (
     <VStack
@@ -63,34 +100,21 @@ export function OptionsInput({
           id={`${FieldName.OPTIONS}.workspaceTemplate`}
           isRequired
           type="string"
-          defaultValue={defaultTemplate?.metadata?.name}
+          defaultValue={
+            formState.defaultValues?.options?.workspaceTemplate ?? defaultTemplate?.metadata?.name
+          }
           displayName="Infrastructure Template"
           enum={templates.map((template) => ({
             value: template.metadata!.name!,
             displayName: getDisplayName(template),
           }))}
-          onChange={() => {
-            // reset all other options, including version
-            const options = getValues("options")
-            for (const [k] of Object.entries(options)) {
-              if (k === "workspaceTemplate") {
-                continue
-              }
-              if (k === "workspaceTemplateVersion") {
-                resetField(`${FieldName.OPTIONS}.workspaceTemplateVersion`, {
-                  defaultValue: "latest",
-                })
-                continue
-              }
-              resetField(`${FieldName.OPTIONS}.${k}`, {})
-            }
-          }}
+          onChange={resetTemplate}
         />
         {currentTemplateVersions && currentTemplateVersions.length > 0 && (
           <OptionFormField
             id={`${FieldName.OPTIONS}.workspaceTemplateVersion`}
             type="string"
-            defaultValue="latest"
+            defaultValue={formState.defaultValues?.options?.workspaceTemplateVersion ?? "latest"}
             displayName="Version"
             enum={[
               { value: "latest", displayName: "Latest" },
@@ -99,19 +123,7 @@ export function OptionsInput({
                 displayName: version.version,
               })),
             ]}
-            onChange={() => {
-              const resetOptions: Parameters<typeof resetField>[1] = {
-                defaultValue: undefined,
-              }
-              // reset all parameters options
-              const options = getValues("options")
-              for (const [k] of Object.entries(options)) {
-                if (k === "workspaceTemplate" || k === "workspaceTemplateVersion") {
-                  continue
-                }
-                resetField(`${FieldName.OPTIONS}.${k}`, resetOptions)
-              }
-            }}
+            onChange={resetTemplateVersion}
           />
         )}
       </FormControl>
@@ -125,13 +137,18 @@ export function OptionsInput({
             }
             const fieldID = `${FieldName.OPTIONS}.${paramID}`
 
+            let defaultValue = param.defaultValue
+            if (typeof formState.defaultValues?.options?.[paramID] === "string") {
+              defaultValue = formState.defaultValues.options[paramID] as string
+            }
+
             return (
               <OptionFormField
                 key={fieldID}
                 id={fieldID}
                 displayName={param.label ?? paramID}
                 description={param.description}
-                defaultValue={param.defaultValue}
+                defaultValue={defaultValue}
                 type={convertParameterType(param.type)}
                 enum={param.options?.map((option) => ({
                   value: option,
@@ -168,7 +185,7 @@ function OptionFormField({
   onChange,
 }: TOptionFormFieldProps) {
   const inputBackground = useColorModeValue("white", "black")
-  const { register, formState } = useFormContext()
+  const { register, formState, control } = useFormContext()
   const optionError = formState.errors[id]
 
   const input = useMemo<ReactNode>(() => {
@@ -206,7 +223,28 @@ function OptionFormField({
 
     switch (type) {
       case "boolean":
-        return <Switch {...props} />
+        return (
+          <Controller
+            name={id}
+            control={control}
+            rules={{ required: isRequired }}
+            defaultValue={defaultValue}
+            render={({ field: { onChange, onBlur, value } }) => {
+              let isChecked = value
+              if (typeof value === "string") {
+                isChecked = value === "true"
+              }
+
+              return (
+                <Switch
+                  onChange={(e) => onChange(e.target.checked)}
+                  onBlur={onBlur}
+                  isChecked={isChecked}
+                />
+              )
+            }}
+          />
+        )
       case "number":
         return (
           <Input
@@ -262,6 +300,7 @@ function OptionFormField({
     inputBackground,
     enumProp,
     type,
+    onChange,
     placeholder,
     displayName,
   ])

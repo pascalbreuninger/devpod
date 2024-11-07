@@ -43,8 +43,8 @@ export function CreateWorkspace() {
     setGlobalError(null)
     const instanceRes = await buildWorkspaceInstance(
       values,
-      currentProject.metadata!.name!,
-      managementSelf.status?.projectNamespacePrefix
+      currentProject?.metadata?.name,
+      managementSelf?.status?.projectNamespacePrefix
     )
     if (instanceRes.err) {
       setGlobalError(instanceRes.val)
@@ -88,7 +88,7 @@ export function CreateWorkspace() {
 
 async function buildWorkspaceInstance(
   values: TFormValues,
-  currentProject: string,
+  currentProject: string | undefined,
   projectNamespacePrefix: string | undefined
 ): Promise<Result<{ workspaceID: string; instance: ManagementV1DevPodWorkspaceInstance }>> {
   const instance = NewResource(Resources.ManagementV1DevPodWorkspaceInstance)

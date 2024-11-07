@@ -18,6 +18,7 @@ import { ErrorMessageBox } from "../Error"
 type TModalBottomBarProps = Readonly<{
   isModal?: boolean
   hasSidebar?: boolean
+  stickToBottom?: boolean
   children: React.ReactNode
 }>
 
@@ -27,6 +28,7 @@ const BottomActionBarContext = createContext<{ ref: RefObject<HTMLDivElement> } 
 export function BottomActionBar({
   isModal = false,
   hasSidebar = true,
+  stickToBottom,
   children,
 }: TModalBottomBarProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -51,16 +53,29 @@ export function BottomActionBar({
     return { base: "100vw", xl: "full" }
   }, [hasSidebar, isModal])
 
+  const otherProps = useMemo<BoxProps>(() => {
+    if (stickToBottom) {
+      return {
+        position: "fixed",
+        bottom: "2rem",
+      }
+    }
+
+    return {
+      position: "sticky",
+      bottom: "-1.1rem",
+    }
+  }, [stickToBottom])
+
   return (
     <BottomActionBarContext.Provider value={value}>
       <HStack
         ref={ref}
         as={motion.div}
+        {...otherProps}
         initial={{ transform: `translateY(100%) ${translateX}` }}
         animate={{ transform: `translateY(0) ${translateX}` }}
-        position="sticky"
         marginTop="10"
-        bottom="-1.1rem"
         left="0"
         width={width}
         height="20"

@@ -19,13 +19,13 @@ import {
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
+import debounce from "lodash.debounce"
 import { useCallback, useMemo, useState } from "react"
 import { useFormContext } from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
 import { FieldName, TFormValues } from "./types"
-import debounce from "lodash.debounce"
 
 // WARN: Make sure these match the regexes in /pkg/git/git.go
 const GIT_REPOSITORY_PATTERN =
@@ -51,7 +51,8 @@ const ADVANCED_GIT_SETTING_TABS = [
 type TAdvancedGitSetting = (typeof AdvancedGitSetting)[keyof typeof AdvancedGitSetting]
 const INITIAL_ADVANCED_SETTINGS = { option: AdvancedGitSetting.BRANCH, value: "" }
 
-export function SourceInput() {
+type TSourceInputProps = Readonly<{ isDisabled: boolean }>
+export function SourceInput({ isDisabled }: TSourceInputProps) {
   const { register, formState, watch, setValue, trigger: validate } = useFormContext<TFormValues>()
   const currentValue = watch(FieldName.SOURCE)
   const sourceType = watch(FieldName.SOURCE_TYPE, "git")
@@ -147,6 +148,7 @@ export function SourceInput() {
         placeholder: "/path/to/workspace",
         secondaryAction: (
           <Button
+            isDisabled={isDisabled}
             aria-invalid={hasErrors ? "true" : undefined}
             _invalid={{
               borderStyle: "solid",
@@ -180,6 +182,7 @@ export function SourceInput() {
         <Popover isLazy onOpen={handlePopoverOpened}>
           <PopoverTrigger>
             <Button
+              isDisabled={isDisabled}
               aria-invalid={hasErrors ? "true" : undefined}
               _invalid={{
                 borderStyle: "solid",
@@ -254,6 +257,7 @@ export function SourceInput() {
     handlePopoverOpened,
     handleSelectFolderClicked,
     hasErrors,
+    isDisabled,
     sourceType,
     tabIndex,
     updateAdvancedGitSettings,

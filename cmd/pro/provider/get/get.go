@@ -16,6 +16,7 @@ func NewCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	c.AddCommand(NewWorkspaceCmd(globalFlags))
 	c.AddCommand(NewSelfCmd(globalFlags))
+	c.AddCommand(NewVersionCmd(globalFlags))
 
 	return c
 }

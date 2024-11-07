@@ -6,13 +6,13 @@ import {
   useWorkspaceStore,
 } from "@/contexts"
 import { Failed, Result, Return } from "@/lib"
+import { Routes } from "@/routes"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import jsyaml from "js-yaml"
 import { useState } from "react"
+import { useNavigate } from "react-router"
 import { CreateWorkspaceForm } from "./CreateWorkspaceForm"
 import { TFormValues } from "./types"
-import { useNavigate } from "react-router"
-import { Routes } from "@/routes"
 
 type TUpdateWorkspaceProps = Readonly<{
   instance: ProWorkspaceInstance
@@ -84,7 +84,7 @@ function updateWorkspaceInstance(
   }
   if (
     newInstance.spec.templateRef?.name !== template ||
-    newInstance.spec.templateRef.version !== workspaceTemplateVersion
+    newInstance.spec.templateRef?.version !== workspaceTemplateVersion
   ) {
     newInstance.spec.templateRef = {
       name: template,

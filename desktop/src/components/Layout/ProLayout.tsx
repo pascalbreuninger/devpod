@@ -13,6 +13,7 @@ type TProLayoutProps = Readonly<{
 export function ProLayout({ toolbarItems, statusBarItems, children }: TProLayoutProps) {
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
   const toolbarHeight = useToken("sizes", "10")
+  const statusBarHeight = useToken("sizes", "8")
   const borderColor = useBorderColor()
 
   return (
@@ -45,7 +46,8 @@ export function ProLayout({ toolbarItems, statusBarItems, children }: TProLayout
             paddingBottom={STATUS_BAR_HEIGHT}
             paddingX="8"
             width="full"
-            height={`calc(100vh - ${toolbarHeight})`}
+            height={`calc(100vh - ${toolbarHeight} - ${statusBarHeight})`}
+            overflowX="hidden"
             overflowY="auto">
             {children}
           </Box>

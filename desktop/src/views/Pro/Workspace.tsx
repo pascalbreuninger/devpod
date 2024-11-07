@@ -212,7 +212,7 @@ export function Workspace() {
     <>
       <VStack align="start" width="full" height="full">
         <BackToWorkspaces />
-        <VStack align="start" width="full" py="4">
+        <VStack align="start" width="full" py="4" px="4">
           <Box w="full">
             <WorkspaceCardHeader instance={instance} showSource={false}>
               <WorkspaceCardHeader.Controls
@@ -261,13 +261,13 @@ export function Workspace() {
                 </Tab>
               ))}
             </TabList>
-            <TabPanels h="full">
+            <TabPanels h="99%">
               {DETAILS_TABS.map(({ label, component: Component }) => (
                 <TabPanel
                   h="full"
                   width="100vw"
                   ml="-8"
-                  px="8"
+                  px="12"
                   pt="8"
                   pb="0"
                   key={label}

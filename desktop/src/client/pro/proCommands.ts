@@ -5,6 +5,7 @@ import {
   TPlatformHealthCheck,
   TProID,
   TProInstance,
+  TPlatformVersionInfo,
 } from "@/types"
 import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
 import {
@@ -15,6 +16,7 @@ import {
   DEVPOD_COMMAND_PRO,
   DEVPOD_FLAG_ACCESS_KEY,
   DEVPOD_FLAG_DEBUG,
+  DEVPOD_FLAG_FORCE_BROWSER,
   DEVPOD_FLAG_HOST,
   DEVPOD_FLAG_INSTANCE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
@@ -53,6 +55,7 @@ export class ProCommands {
       DEVPOD_COMMAND_LOGIN,
       host,
       useFlag,
+      DEVPOD_FLAG_FORCE_BROWSER,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
       ...maybeAccessKeyFlag,
     ])
@@ -139,9 +142,10 @@ export class ProCommands {
     return Return.Ok()
   }
 
-  static WatchWorkspaces(id: TProID) {
+  static WatchWorkspaces(id: TProID, projectName: string) {
     const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
-    const args = [DEVPOD_COMMAND_PRO, "watch-workspaces", hostFlag]
+    const projectFlag = toFlagArg(DEVPOD_FLAG_PROJECT, projectName)
+    const args = [DEVPOD_COMMAND_PRO, "watch-workspaces", hostFlag, projectFlag]
 
     return ProCommands.newCommand(args)
   }
@@ -253,5 +257,20 @@ export class ProCommands {
     }
 
     return Return.Value(JSON.parse(result.val.stdout) as TPlatformHealthCheck)
+  }
+
+  static async GetVersion(id: TProID) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const args = [DEVPOD_COMMAND_PRO, "version", hostFlag]
+
+    const result = await ProCommands.newCommand(args).run()
+    if (result.err) {
+      return result
+    }
+    if (!isOk(result.val)) {
+      return getErrorFromChildProcess(result.val)
+    }
+
+    return Return.Value(JSON.parse(result.val.stdout) as TPlatformVersionInfo)
   }
 }

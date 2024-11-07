@@ -13,10 +13,10 @@ export function useProjectClusters(): UseQueryResult<TProjectClusters> {
   const { host, currentProject, client } = useProContext()
   const query = useQuery<TProjectClusters>({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: QueryKeys.proClusters(host, currentProject.metadata!.name!),
+    queryKey: QueryKeys.proClusters(host, currentProject?.metadata!.name!),
     queryFn: async () => {
       const projectClusters = (
-        await client.getProjectClusters(currentProject.metadata!.name!)
+        await client.getProjectClusters(currentProject?.metadata!.name!)
       ).unwrap()
 
       return {
@@ -24,6 +24,7 @@ export function useProjectClusters(): UseQueryResult<TProjectClusters> {
         clusters: projectClusters?.clusters ?? [],
       }
     },
+    enabled: !!currentProject,
   })
 
   return query

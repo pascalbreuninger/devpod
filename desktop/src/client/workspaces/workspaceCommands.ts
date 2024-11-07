@@ -52,7 +52,7 @@ export class WorkspaceCommands {
   }
 
   static async ListWorkspaces(skipPro: boolean): Promise<Result<TWorkspaceWithoutStatus[]>> {
-    const maybeSkipProFlag = exists(skipPro) ? [DEVPOD_FLAG_SKIP_PRO] : []
+    const maybeSkipProFlag = skipPro ? [DEVPOD_FLAG_SKIP_PRO] : []
 
     const result = await new Command([
       DEVPOD_COMMAND_LIST,
