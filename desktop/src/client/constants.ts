@@ -64,7 +64,7 @@ export const DEVPOD_FLAG_INSTANCE = "--instance"
 export const DEVPOD_FLAG_PROJECT = "--project"
 export const DEVPOD_FLAG_SKIP_PRO = "--skip-pro"
 export const DEVPOD_FLAG_DOTFILES = "--dotfiles"
-export const DEVPOD_FLAG_GIT_SIGNING_KEY = "--git-ssh-signing-key="
+export const DEVPOD_FLAG_GIT_SIGNING_KEY = "--git-ssh-signing-key"
 export const DEVPOD_FLAG_FORCE_BROWSER = "--force-browser"
 
 export const DEVPOD_UI_ENV_VAR = "DEVPOD_UI"

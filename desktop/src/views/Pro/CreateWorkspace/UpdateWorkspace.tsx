@@ -13,6 +13,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router"
 import { CreateWorkspaceForm } from "./CreateWorkspaceForm"
 import { TFormValues } from "./types"
+import { Box } from "@chakra-ui/react"
 
 type TUpdateWorkspaceProps = Readonly<{
   instance: ProWorkspaceInstance
@@ -55,13 +56,15 @@ export function UpdateWorkspace({ instance, template }: TUpdateWorkspaceProps) {
   }
 
   return (
-    <CreateWorkspaceForm
-      instance={instance}
-      template={template}
-      onSubmit={handleSubmit}
-      onReset={handleReset}
-      error={globalError}
-    />
+    <Box mb="40">
+      <CreateWorkspaceForm
+        instance={instance}
+        template={template}
+        onSubmit={handleSubmit}
+        onReset={handleReset}
+        error={globalError}
+      />
+    </Box>
   )
 }
 

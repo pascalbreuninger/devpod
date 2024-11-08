@@ -17,13 +17,15 @@ import {
   Divider,
   HStack,
   Text,
+  ComponentWithAs,
+  IconProps,
+  VStack,
   useColorModeValue,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, ReactElement, ReactNode, cloneElement } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
-import { WorkspaceInfoDetail } from "./WorkspaceInfoDetail"
 import { WorkspaceStatus } from "./WorkspaceStatus"
 
 type TWorkspaceInstanceCardProps = Readonly<{
@@ -189,5 +191,24 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
       {deleteModal}
       {stopModal}
     </>
+  )
+}
+
+type TWorkspaceInfoDetailProps = Readonly<{
+  icon: ComponentWithAs<"svg", IconProps>
+  label: ReactElement
+  children: ReactNode
+}>
+function WorkspaceInfoDetail({ icon: Icon, label, children }: TWorkspaceInfoDetailProps) {
+  const l = cloneElement(label, { color: "gray.500", fontWeight: "medium", fontSize: "sm" })
+
+  return (
+    <VStack align="start" gap="1" color="gray.700">
+      <HStack gap="1">
+        <Icon boxSize={4} color="gray.500" />
+        {l}
+      </HStack>
+      {children}
+    </VStack>
   )
 }

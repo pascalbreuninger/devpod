@@ -4,7 +4,7 @@ import {
   EventEmitter,
   Command as ShellCommand,
 } from "@tauri-apps/plugin-shell"
-import { debug, isError, Result, ResultError, Return, sleep } from "../lib"
+import { debug, ErrorTypeCancelled, isError, Result, ResultError, Return, sleep } from "../lib"
 import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
 
@@ -103,7 +103,7 @@ export class Command implements TCommand<ChildProcess<string>> {
       if (this.cancelled) {
         await this.childProcess.kill()
 
-        return Return.Failed("Command already cancelled")
+        return Return.Failed("Command already cancelled", "", ErrorTypeCancelled)
       }
 
       await new Promise((res, rej) => {
@@ -164,6 +164,10 @@ export class Command implements TCommand<ChildProcess<string>> {
       return Return.Ok()
     } catch (e) {
       if (isError(e)) {
+        if (this.cancelled) {
+          return Return.Failed(e.message, "", ErrorTypeCancelled)
+        }
+
         return Return.Failed(e.message)
       }
       console.error(e)

@@ -1,5 +1,5 @@
 import { Close, Connect, DevpodWordmark, Ellipsis, Folder } from "@/icons"
-import { getDisplayName, useLoginProModal, useReLoginProModal } from "@/lib"
+import { getDisplayName, useLoginProModal } from "@/lib"
 import { TProInstance } from "@/types"
 import { useDeleteProviderModal } from "@/views/Providers"
 import { ArrowUpDownIcon, CheckIcon } from "@chakra-ui/icons"
@@ -82,7 +82,7 @@ export function ContextSwitcher({
       <Popover>
         <PopoverTrigger>
           <Button variant="ghost" color="gray.700" rightIcon={<ArrowUpDownIcon />}>
-            {getDisplayName(currentProject)}
+            {getDisplayName(currentProject, "Unknown Project")}
           </Button>
         </PopoverTrigger>
         <Portal>
@@ -92,6 +92,7 @@ export function ContextSwitcher({
                 {proInstances.map(({ host, authenticated, image }) => (
                   <ListItem key={host}>
                     <PlatformDetails
+                      currentHost={currentHost}
                       host={host!}
                       image={image}
                       authenticated={authenticated}
@@ -102,12 +103,12 @@ export function ContextSwitcher({
                       <VStack
                         w="full"
                         align="start"
-                        py="4"
-                        borderWidth="thin"
-                        borderRightWidth="0"
-                        borderLeftWidth="0"
-                        borderColor="gray.300">
-                        <Heading pl="4" size="xs" color="gray.600" textTransform="uppercase">
+                        pb="4"
+                        pt="2"
+                        pl="2"
+                        borderBottomWidth="thin"
+                        borderBottomStyle="solid">
+                        <Heading pl="4" size="xs" color="gray.500" textTransform="uppercase">
                           Projects
                         </Heading>
                         <List w="full">
@@ -122,7 +123,7 @@ export function ContextSwitcher({
                                 alignItems="center"
                                 leftIcon={<Folder boxSize={5} />}
                                 pl="4"
-                                color="gray.700"
+                                color="gray.600"
                                 fontWeight="normal"
                                 rightIcon={
                                   project.metadata?.name === currentProject.metadata?.name ? (
@@ -151,6 +152,7 @@ export function ContextSwitcher({
 }
 type TPlatformDetailsProps = Readonly<{
   host: string
+  currentHost: string
   image: ReactNode
   authenticated?: boolean | null
   onClick: VoidFunction
@@ -158,6 +160,7 @@ type TPlatformDetailsProps = Readonly<{
 }>
 function PlatformDetails({
   host,
+  currentHost,
   image,
   authenticated,
   onClick,
@@ -173,13 +176,18 @@ function PlatformDetails({
 
   return (
     <>
-      <Button
-        variant="unstyled"
-        _hover={{ bgColor: "gray.100" }}
+      <HStack
+        _hover={{ bgColor: "gray.100", cursor: "pointer" }}
         w="full"
         px="4"
         h="12"
-        onClick={onClick}>
+        onClick={onClick}
+        {...(currentHost != host
+          ? {
+              borderBottomStyle: "solid",
+              borderBottomWidth: "thin",
+            }
+          : {})}>
         <HStack w="full" justify="space-between">
           {image ? (
             typeof image === "string" ? (
@@ -188,7 +196,12 @@ function PlatformDetails({
               image
             )
           ) : (
-            <Text maxW="50%" overflow="hidden" textOverflow="ellipsis">
+            <Text
+              maxW="50%"
+              fontWeight="semibold"
+              fontSize="sm"
+              overflow="hidden"
+              textOverflow="ellipsis">
               {host}
             </Text>
           )}
@@ -221,7 +234,7 @@ function PlatformDetails({
             )}
           </HStack>
         </HStack>
-      </Button>
+      </HStack>
       {deleteProviderModal}
     </>
   )

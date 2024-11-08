@@ -31,7 +31,7 @@ export function CreateWorkspace() {
   const workspace = useWorkspace<ProWorkspaceInstance>(undefined)
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
   const [globalError, setGlobalError] = useState<Failed | null>(null)
-  const { host, currentProject, managementSelf, client } = useProContext()
+  const { host, currentProject, managementSelfQuery, client } = useProContext()
   const navigate = useNavigate()
 
   const handleReset = () => {
@@ -44,7 +44,7 @@ export function CreateWorkspace() {
     const instanceRes = await buildWorkspaceInstance(
       values,
       currentProject?.metadata?.name,
-      managementSelf?.status?.projectNamespacePrefix
+      managementSelfQuery.data?.status?.projectNamespacePrefix
     )
     if (instanceRes.err) {
       setGlobalError(instanceRes.val)
@@ -74,7 +74,7 @@ export function CreateWorkspace() {
   }
 
   return (
-    <Box h="full">
+    <Box h="full" mb="40">
       <VStack align="start">
         <BackToWorkspaces />
         <HStack align="center" justify="space-between" mb="8">

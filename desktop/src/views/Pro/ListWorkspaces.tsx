@@ -16,11 +16,11 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { useNavigate } from "react-router"
-import { WorkspaceInstanceCard } from "./WorkspaceInstanceCard"
+import { WorkspaceInstanceCard } from "./Workspace"
 
 export function ListWorkspaces() {
   const instances = useWorkspaces<ProWorkspaceInstance>()
-  const { host, isLoading } = useProContext()
+  const { host, isLoadingWorkspaces } = useProContext()
   const navigate = useNavigate()
 
   const handleCreateClicked = () => {
@@ -51,7 +51,7 @@ export function ListWorkspaces() {
             ))}
           </List>
         </>
-      ) : isLoading ? (
+      ) : isLoadingWorkspaces ? (
         <Center w="full" h="60%" flexFlow="column nowrap">
           <Spinner size="xl" thickness="4px" speed="1s" color="gray.600" />
           <Text mt="4">Loading Workspaces...</Text>

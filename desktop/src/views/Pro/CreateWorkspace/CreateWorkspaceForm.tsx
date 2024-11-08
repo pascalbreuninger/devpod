@@ -59,7 +59,7 @@ export function CreateWorkspaceForm({
   useEffect(() => {
     if (!form.getFieldState(FieldName.DEFAULT_IDE).isDirty && defaultIDE && defaultIDE.name) {
       form.setValue(FieldName.DEFAULT_IDE, defaultIDE.name, {
-        shouldDirty: true,
+        shouldDirty: false,
         shouldTouch: true,
       })
     }
@@ -164,7 +164,7 @@ export function CreateWorkspaceForm({
                   Workspace Name
                 </FormLabel>
               }>
-              <Input {...form.register(FieldName.NAME, { required: false })} />
+              <Input {...form.register(FieldName.NAME, { required: false })} bg="white" />
 
               {exists(nameError) && (
                 <FormErrorMessage>{nameError.message ?? "Error"}</FormErrorMessage>
@@ -176,17 +176,9 @@ export function CreateWorkspaceForm({
             <BottomActionBarError error={error} containerRef={containerRef} />
             <ButtonGroup marginLeft="auto">
               <Button
+                isDisabled={Object.keys(form.formState.dirtyFields).length === 0}
                 onClick={() => {
-                  console.log(defaultValues)
-                  form.reset(defaultValues, {
-                    keepValues: false,
-                    keepDefaultValues: true,
-                    keepDirty: false,
-                    keepTouched: false,
-                    keepErrors: false,
-                    keepDirtyValues: false,
-                    keepIsValid: false,
-                  })
+                  form.reset(defaultValues)
                   onReset()
                 }}>
                 {instance ? "Reset Changes" : "Cancel"}{" "}
@@ -194,7 +186,10 @@ export function CreateWorkspaceForm({
               <Button
                 type="submit"
                 isLoading={form.formState.isSubmitting}
-                isDisabled={Object.keys(form.formState.errors).length > 0}>
+                isDisabled={
+                  Object.keys(form.formState.errors).length > 0 ||
+                  Object.keys(form.formState.dirtyFields).length === 0
+                }>
                 {instance ? "Save & Rebuild" : "Create Workspace"}
               </Button>
             </ButtonGroup>

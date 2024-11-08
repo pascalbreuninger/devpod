@@ -41,7 +41,7 @@ export function DevContainerInput({ environmentTemplates: templates }: TDevConta
   }, [devContainerType, inputProps, templates])
 
   return (
-    <InputGroup>
+    <InputGroup bg="white">
       <InputLeftAddon padding="0">
         <Select
           {...register(FieldName.DEVCONTAINER_TYPE, {

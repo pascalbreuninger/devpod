@@ -1,39 +1,38 @@
 import { ProClient, client as globalClient } from "@/client"
-import { ErrorMessageBox, ProLayout, ToolbarActions, ToolbarTitle } from "@/components"
-import { Annotations, Failed } from "@/lib"
+import { ToolbarActions, ToolbarTitle } from "@/components"
+import { Annotations } from "@/lib"
 import { Routes } from "@/routes"
-import { Link, Spinner, Text, VStack } from "@chakra-ui/react"
+import { Text } from "@chakra-ui/react"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
-import { useQuery } from "@tanstack/react-query"
+import { UseQueryResult, useQuery } from "@tanstack/react-query"
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
-import { Link as RouterLink, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
 
 type TProContext = Readonly<{
-  managementSelf?: ManagementV1Self
+  managementSelfQuery: UseQueryResult<ManagementV1Self | undefined>
+  projectsQuery: UseQueryResult<readonly ManagementV1Project[] | undefined>
   currentProject?: ManagementV1Project
   host: string
   client: ProClient
-  isLoading: boolean
+  isLoadingWorkspaces: boolean
 }>
 const ProContext = createContext<TProContext>(null!)
 export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
-  const [connectionError, setConnectionError] = useState<Failed | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
   const navigate = useNavigate()
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
   const client = useMemo(() => globalClient.getProClient(host), [host])
   const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
-  const { data: managementSelf } = useQuery({
+  const managementSelfQuery = useQuery({
     queryKey: ["managementSelf"],
     queryFn: async () => {
       return (await client.getSelf()).unwrap()
     },
   })
-
-  const { data: projects } = useQuery({
+  const projectsQuery = useQuery({
     queryKey: ["pro", host, "projects"],
     queryFn: async () => {
       return (await client.listProjects()).unwrap()
@@ -45,16 +44,14 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       return selectedProject
     }
 
-    return projects?.[0]
-  }, [projects, selectedProject])
+    return projectsQuery.data?.[0]
+  }, [projectsQuery, selectedProject])
 
   useEffect(() => {
     if (!currentProject?.metadata?.name) {
       return
     }
-    setIsLoading(true)
-
-    // TODO: Check connection error!
+    setIsLoadingWorkspaces(true)
 
     return client.watchWorkspaces(currentProject.metadata.name, (workspaces) => {
       // sort by last activity (newest > oldest)
@@ -70,7 +67,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       store.setWorkspaces(sorted)
       // dirty, dirty
       setTimeout(() => {
-        setIsLoading(false)
+        setIsLoadingWorkspaces(false)
       }, 1_000)
     })
   }, [client, store, currentProject])
@@ -91,21 +88,28 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   }
 
   const value = useMemo<TProContext>(() => {
-    return { managementSelf, currentProject, host, client, isLoading }
-  }, [currentProject, managementSelf, host, client, isLoading])
-
-  if (connectionError) {
-    return <ConnectionErrorBox error={connectionError} host={host} client={client} />
-  }
+    return {
+      managementSelfQuery,
+      currentProject,
+      projectsQuery,
+      host,
+      client,
+      isLoadingWorkspaces,
+    }
+  }, [managementSelfQuery, currentProject, projectsQuery, host, client, isLoadingWorkspaces])
 
   return (
     <ProContext.Provider value={value}>
-      <ToolbarTitle>{host}</ToolbarTitle>
+      <ToolbarTitle>
+        <Text maxW="60" fontSize="sm" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+          {host}
+        </Text>
+      </ToolbarTitle>
       <ToolbarActions>
         <ContextSwitcher
           currentHost={host}
           onHostChange={handleHostChanged}
-          projects={projects ?? []}
+          projects={projectsQuery.data ?? []}
           currentProject={currentProject!}
           onProjectChange={handleProjectChanged}
         />
@@ -117,40 +121,4 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
 
 export function useProContext() {
   return useContext(ProContext)
-}
-
-type TConnectionErrorBoxProps = Readonly<{ error: Failed; host: string; client: ProClient }>
-function ConnectionErrorBox({ error, host, client }: TConnectionErrorBoxProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: [host, "error", "healthcheck"],
-    queryFn: async () => {
-      const res = await client.checkHealth()
-      // We expect this to go wrong
-      if (res.err) {
-        return res.val
-      }
-
-      return null
-    },
-  })
-  useEffect(() => {
-    globalClient.ready()
-  }, [])
-
-  return (
-    <ProLayout statusBarItems={null} toolbarItems={null}>
-      <VStack align="start" gap="4">
-        <Text fontSize="md" fontWeight="medium" mb="4">
-          Something went wrong connecting to {host} ({error.message}):
-        </Text>
-        {isLoading ? <Spinner /> : <ErrorMessageBox error={new Error(data?.message)} />}
-        <Link as={RouterLink} to={Routes.ROOT}>
-          Go to home screen
-        </Link>
-        <Link as={RouterLink} to={Routes.toProInstance(host)}>
-          Reload
-        </Link>
-      </VStack>
-    </ProLayout>
-  )
 }

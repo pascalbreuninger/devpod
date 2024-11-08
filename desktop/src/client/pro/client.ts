@@ -4,10 +4,11 @@ import { ManagementV1Project } from "@loft-enterprise/client/gen/models/manageme
 import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
 import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
-import { Result, ResultError } from "../../lib"
+import { ErrorTypeCancelled, Result, ResultError } from "../../lib"
 import { TImportWorkspaceConfig, TListProInstancesConfig, TProID, TProInstance } from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
+import { Failed } from "@loft-enterprise/client"
 
 export class ProClient implements TDebuggable {
   constructor(private readonly id: string) {}
@@ -48,26 +49,33 @@ export class ProClient implements TDebuggable {
 
   public watchWorkspaces(
     projectName: string,
-    listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void
+    listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void,
+    errorListener?: (failed: Failed) => void
   ) {
     const cmd = ProCommands.WatchWorkspaces(this.id, projectName)
 
     // kick off stream in the background
-    cmd.stream(
-      (event) => {
-        if (event.type === "data") {
-          const rawInstances =
-            event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[]
-          const workspaceInstances = rawInstances.map(
-            (instance) => new ProWorkspaceInstance(instance)
-          )
-          listener(workspaceInstances)
+    cmd
+      .stream(
+        (event) => {
+          if (event.type === "data") {
+            const rawInstances =
+              event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[]
+            const workspaceInstances = rawInstances.map(
+              (instance) => new ProWorkspaceInstance(instance)
+            )
+            listener(workspaceInstances)
 
-          return
+            return
+          }
+        },
+        { ignoreStderrError: true }
+      )
+      .then((res) => {
+        if (res.err && res.val.type !== ErrorTypeCancelled) {
+          errorListener?.(res.val)
         }
-      },
-      { ignoreStderrError: true }
-    )
+      })
 
     // Don't await here, we want to return the unsubscribe function
     return () => {

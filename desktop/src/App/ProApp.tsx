@@ -26,6 +26,7 @@ import {
   useProContext,
   useProHost,
 } from "../contexts"
+import { useConnectionStatus } from "@/lib"
 
 export function ProApp() {
   const host = useProHost()
@@ -88,9 +89,10 @@ function ProAppContent({ host }: TProAppContentProps) {
           <HStack />
           <HStack gap="1">
             <Tooltip label="Client version">
-              <Tooltip label=" version">
+              {/* The box is just here for tooltip to take a ref */}
+              <Box>
                 <StatusBar.Version />
-              </Tooltip>
+              </Box>
             </Tooltip>
             {versionInfo?.currentProviderVersion && (
               <Tooltip label="Provider version">
@@ -129,34 +131,6 @@ function ProAppContent({ host }: TProAppContentProps) {
       <Outlet />
     </ProLayout>
   )
-}
-
-type TConnectionStatus = Readonly<{
-  state?: "connected" | "disconnected"
-  isLoading: boolean
-  details?: string
-}>
-export function useConnectionStatus(): TConnectionStatus {
-  const { host, client } = useProContext()
-  const { data: connection, isLoading } = useQuery({
-    queryKey: QueryKeys.connectionStatus(host),
-    queryFn: async () => {
-      const res = await client.checkHealth()
-      let state: TConnectionStatus["state"] = "disconnected"
-      if (res.err) {
-        return { state }
-      }
-
-      if (res.val.healthy) {
-        state = "connected"
-      }
-
-      return { state }
-    },
-    refetchInterval: 5_000,
-  })
-
-  return { ...connection, isLoading }
 }
 
 function usePlatformVersion(): TPlatformVersionInfo | undefined {

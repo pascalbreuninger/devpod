@@ -4,6 +4,7 @@ import {
   Briefcase,
   CheckCircle,
   CircleWithArrow,
+  Connect,
   DevPodProBadge,
   ExclamationTriangle,
   Plus,
@@ -17,6 +18,7 @@ import {
   Box,
   Button,
   ButtonGroup,
+  Divider,
   HStack,
   Heading,
   Icon,
@@ -112,46 +114,54 @@ function ProPopoverContent({ proInstances, emptyProInstances }: TProPopoverConte
   const navigate = useNavigate()
 
   return (
-    <List>
-      {proInstances === undefined || proInstances.length === 0
-        ? emptyProInstances
-        : proInstances.map(({ host, authenticated }) => {
-            if (!host) {
-              return null
-            }
+    <>
+      <List>
+        {proInstances === undefined || proInstances.length === 0
+          ? emptyProInstances
+          : proInstances.map(({ host, authenticated }) => {
+              if (!host) {
+                return null
+              }
 
-            return (
-              <ListItem key={host}>
-                <Button
-                  _hover={{ bg: "gray.100" }}
-                  variant="unstyled"
-                  w="full"
-                  px="4"
-                  h="12"
-                  onClick={() => navigate(Routes.toProInstance(host))}>
-                  <HStack w="full" justify="space-between">
-                    <Text maxW="50%" overflow="hidden" textOverflow="ellipsis">
-                      {host}
-                    </Text>
-                    <HStack>
-                      {authenticated != null && (
-                        <Box
-                          boxSize="2"
-                          bg={authenticated ? "green.400" : "orange.400"}
-                          rounded="full"
-                        />
-                      )}
-                      <Text fontSize="xs" fontWeight="normal">
+              return (
+                <ListItem key={host}>
+                  <Button
+                    _hover={{ bg: "gray.100" }}
+                    variant="unstyled"
+                    w="full"
+                    px="4"
+                    h="12"
+                    onClick={() => navigate(Routes.toProInstance(host))}>
+                    <HStack w="full" justify="space-between">
+                      <Text maxW="50%" overflow="hidden" textOverflow="ellipsis">
                         {host}
                       </Text>
-                      <CircleWithArrow boxSize={5} />
+                      <HStack>
+                        {authenticated != null && (
+                          <Box
+                            boxSize="2"
+                            bg={authenticated ? "green.400" : "orange.400"}
+                            rounded="full"
+                          />
+                        )}
+                        <Text fontSize="xs" fontWeight="normal">
+                          {host}
+                        </Text>
+                        <CircleWithArrow boxSize={5} />
+                      </HStack>
                     </HStack>
-                  </HStack>
-                </Button>
-              </ListItem>
-            )
-          })}
-    </List>
+                  </Button>
+                </ListItem>
+              )
+            })}
+      </List>
+
+      <Divider />
+
+      <Button py="5" color="gray.700" variant="ghost" leftIcon={<Connect boxSize={4} />}>
+        Connect new platform
+      </Button>
+    </>
   )
 }
 

@@ -1,16 +1,15 @@
-import { Button, Container, Heading, Image, Link, VStack, Text } from "@chakra-ui/react"
-import { Outlet, Link as RouterLink } from "react-router-dom"
-import { useProHost, useProInstances } from "@/contexts"
-import { Routes } from "@/routes"
 import { useAppReady } from "@/App/useAppReady"
-import { WarningMessageBox } from "@/components"
-import { useMemo } from "react"
-import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
+import { useProContext, useProInstances } from "@/contexts"
 import { DevPodIcon } from "@/icons"
-import { useReLoginProModal } from "@/lib"
+import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
+import { useConnectionStatus, useReLoginProModal } from "@/lib"
+import { Box, Button, Container, HStack, Heading, Image, Text, VStack } from "@chakra-ui/react"
+import { useMemo } from "react"
+import { Outlet } from "react-router-dom"
 
 export function ProInstance() {
-  const host = useProHost()
+  const connectionStatus = useConnectionStatus()
+  const { host } = useProContext()
   const { errorModal, changelogModal, proLoginModal } = useAppReady()
   const [[proInstances]] = useProInstances()
   const proInstance = useMemo(() => {
@@ -18,23 +17,7 @@ export function ProInstance() {
   }, [host, proInstances])
   const { modal: reLoginProModal, handleOpenLogin: handleReLoginClicked } = useReLoginProModal()
 
-  if (host == undefined || host.length === 0) {
-    return (
-      <WarningMessageBox
-        warning={
-          <>
-            Pro Instance not found
-            <br />
-            <Link as={RouterLink} to={Routes.ROOT}>
-              Go back
-            </Link>
-          </>
-        }
-      />
-    )
-  }
-
-  if (proInstance?.authenticated === false) {
+  if (proInstance?.authenticated === false && connectionStatus.state === "connected") {
     return (
       <Container maxW="container.lg" h="full">
         <VStack align="center" justify="center" w="full" h="full">
@@ -53,6 +36,29 @@ export function ProInstance() {
           </Button>
         </VStack>
         {reLoginProModal}
+      </Container>
+    )
+  }
+
+  if (connectionStatus.state === "disconnected") {
+    return (
+      <Container maxW="container.lg" h="full">
+        <VStack align="center" mt="-40" justify="center" w="full" h="full">
+          <HStack gap="4">
+            <Box boxSize="4" bg={"red.400"} rounded="full" />
+            <Heading fontWeight="thin" color="gray.600">
+              Unable to connect to platform
+            </Heading>
+          </HStack>
+          <Text textAlign="center">
+            DevPod can not connect to your platform at{" "}
+            <Text display="inline" fontWeight="semibold">
+              {host}
+            </Text>
+            .<br />
+            Please contact your administrator.
+          </Text>
+        </VStack>
       </Container>
     )
   }
