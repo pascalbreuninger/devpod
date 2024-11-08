@@ -54,12 +54,13 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
   const { modal: deleteModal, open: openDeleteModal } = useDeleteWorkspaceModal(
     instanceDisplayName,
     useCallback(
-      (force: boolean, close) => {
-        workspace.remove(force)
+      (_, close) => {
+        workspace.remove(true)
         close()
       },
       [workspace]
-    )
+    ),
+    true
   )
 
   const { modal: rebuildModal, open: openRebuildModal } = useRebuildWorkspaceModal(
@@ -147,8 +148,7 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
 
             <WorkspaceInfoDetail icon={Status} label={<Text>Template</Text>}>
               <Text>
-                {getDisplayName(template, templateRef?.name)}
-                {templateRef?.version ? `/${templateRef.version}` : ""}
+                {getDisplayName(template, templateRef?.name)}/{templateRef?.version || "latest"}
               </Text>
             </WorkspaceInfoDetail>
 

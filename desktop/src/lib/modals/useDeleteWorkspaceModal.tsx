@@ -16,7 +16,8 @@ import { useMemo, useState } from "react"
 
 export function useDeleteWorkspaceModal(
   workspaceName: string,
-  onClick: (forceDelete: boolean, closeModal: VoidFunction) => void
+  onClick: (forceDelete: boolean, closeModal: VoidFunction) => void,
+  force?: boolean
 ) {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [forceDelete, setForceDelete] = useState<boolean>(false)
@@ -31,11 +32,13 @@ export function useDeleteWorkspaceModal(
           <ModalBody>
             Deleting the workspace will erase all state. Are you sure you want to delete{" "}
             {workspaceName}?
-            <Box marginTop={"2.5"}>
-              <Checkbox checked={forceDelete} onChange={(e) => setForceDelete(e.target.checked)}>
-                Force Delete the Workspace
-              </Checkbox>
-            </Box>
+            {force == null && (
+              <Box marginTop={"2.5"}>
+                <Checkbox checked={forceDelete} onChange={(e) => setForceDelete(e.target.checked)}>
+                  Force Delete the Workspace
+                </Checkbox>
+              </Box>
+            )}
           </ModalBody>
           <ModalFooter>
             <HStack spacing={"2"}>
@@ -48,7 +51,7 @@ export function useDeleteWorkspaceModal(
         </ModalContent>
       </Modal>
     ),
-    [forceDelete, isOpen, onClick, onClose, workspaceName]
+    [force, forceDelete, isOpen, onClick, onClose, workspaceName]
   )
 
   return { modal, open: onOpen }

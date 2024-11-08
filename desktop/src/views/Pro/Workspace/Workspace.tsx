@@ -50,12 +50,13 @@ export function Workspace() {
   const { modal: deleteModal, open: openDeleteModal } = useDeleteWorkspaceModal(
     instanceDisplayName,
     useCallback(
-      (force, close) => {
-        workspace.remove(force)
+      (_, close) => {
+        workspace.remove(true)
         close()
       },
       [workspace]
-    )
+    ),
+    true
   )
   const { modal: rebuildModal, open: openRebuildModal } = useRebuildWorkspaceModal(
     instanceDisplayName,
@@ -133,7 +134,7 @@ export function Workspace() {
     <>
       <VStack align="start" width="full" height="full">
         <BackToWorkspaces />
-        <VStack align="start" width="full" py="4" px="4">
+        <VStack align="start" width="full" pl="4" px="4" paddingInlineEnd="0">
           <Box w="full">
             <WorkspaceCardHeader instance={instance} showSource={false}>
               <WorkspaceCardHeader.Controls
