@@ -519,7 +519,10 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, changeLas
 	// prepare form options
 	options := []huh.Option[*providerpkg.Workspace]{}
 	for _, workspace := range workspaces {
-		key := fmt.Sprintf("%s (%s)", workspace.ID, workspace.UID)
+		key := workspace.ID
+		if workspace.IsPro() && workspace.Pro.DisplayName != "" {
+			key = fmt.Sprintf("%s (%s)", workspace.Pro.DisplayName, workspace.ID)
+		}
 		options = append(options, huh.NewOption(key, workspace))
 	}
 	if len(workspaces) == 0 {

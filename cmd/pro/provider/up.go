@@ -70,6 +70,12 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return err
 	}
 
+	// biggest change is in here :)
+	// What if we need to run new provider with old workspace? -> Shouldn't matter since it's already using the CRD
+	// How to change options? Doesn't work anymore...
+	// This means we have to have some sort of split
+	// TODO: Resolve provider options here
+
 	instance, err := platform.FindInstanceInProject(ctx, baseClient, info.UID, info.ProjectName)
 	if err != nil {
 		return err
