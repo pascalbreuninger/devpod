@@ -15,12 +15,20 @@ import { matchPath, useNavigate } from "react-router"
 import { client } from "../client"
 import { ErrorMessageBox } from "../components"
 import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "../constants"
-import { startWorkspaceAction, useChangeSettings, useWorkspaceStore } from "../contexts"
+import {
+  startWorkspaceAction,
+  useChangeSettings,
+  useProInstances,
+  useWorkspaceStore,
+} from "../contexts"
 import { exists, useLoginProModal } from "../lib"
 import { Routes } from "../routes"
 import { useChangelogModal } from "./useChangelogModal"
+import { useQuery } from "@tanstack/react-query"
+import { QueryKeys } from "@/queryKeys"
 
 export function useAppReady() {
+  const [[proInstances]] = useProInstances()
   const { store } = useWorkspaceStore()
   const isReadyLockRef = useRef<boolean>(false)
   const viewID = useId()
@@ -30,6 +38,63 @@ export function useAppReady() {
   const { modal: changelogModal } = useChangelogModal(isReadyLockRef.current)
   const { modal: proLoginModal, handleOpenLogin: handleProLogin } = useLoginProModal()
   const { set: setSetting } = useChangeSettings()
+
+  // auto-update pro providers in the background
+  useQuery({
+    queryKey: QueryKeys.proProviderUpdates(proInstances),
+    queryFn: async () => {
+      if (!proInstances || proInstances.length === 0) {
+        return null
+      }
+
+      // let pro client check for updates without using the provider
+      // we don't really care about the result in the context of the GUI, just need to make sure it's updating
+      await Promise.allSettled(
+        proInstances
+          .filter((instance) => instance.provider && instance.host)
+          .map(async (instance) => {
+            client.log("info", `[${instance.host ?? ""}] Checking for update`)
+
+            const proClient = client.getProClient(instance.host!)
+            const checkUpdateRes = await proClient.checkUpdate()
+            if (checkUpdateRes.err) {
+              client.log(
+                "error",
+                `[${instance.host ?? ""}] Failed to check for upgrade: ${
+                  checkUpdateRes.val.message
+                }`
+              )
+
+              return null
+            }
+
+            const { available: updateAvailable, newVersion } = checkUpdateRes.val
+            if (!updateAvailable || !newVersion) {
+              return null
+            }
+            client.log(
+              "info",
+              `[${
+                instance.host ?? ""
+              }] New version available (${newVersion}). Attempting to update.`
+            )
+
+            const updateRes = await proClient.update(newVersion)
+            if (updateRes.err) {
+              client.log("error", `[${instance.host ?? ""}] Failed to upgrade: ${updateRes.val}`)
+
+              return null
+            }
+
+            client.log("info", `[${instance.host ?? ""}] Successfully updated to ${newVersion}`)
+          })
+      )
+
+      return null
+    },
+    enabled: proInstances && proInstances.length > 0,
+    refetchInterval: 1_000 * 60 * 5, // 5 minutes
+  })
 
   useEffect(() => {
     window.addEventListener("contextmenu", (e) => {

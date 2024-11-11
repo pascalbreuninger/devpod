@@ -275,9 +275,12 @@ export type TCommunityProvider = Readonly<{
   repository: string
 }>
 //#endregion
-
 export type TPlatformHealthCheck = Readonly<{
   healthy: TMaybe<boolean>
+}>
+export type TPlatformUpdateCheck = Readonly<{
+  available: TMaybe<boolean>
+  newVersion: TMaybe<string>
 }>
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {

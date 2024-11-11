@@ -346,8 +346,6 @@ class Client {
     logFn(message)
   }
 
-  // TODO: map with all id:client combinations in this class?
-  // Easier debug settings...
   public getProClient(id: TProID): ProClient {
     return new ProClient(id)
   }

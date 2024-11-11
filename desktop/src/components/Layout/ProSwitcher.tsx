@@ -1,24 +1,15 @@
 import { client } from "@/client"
-import { useProInstances, useSettings } from "@/contexts"
-import {
-  Briefcase,
-  CheckCircle,
-  CircleWithArrow,
-  Connect,
-  DevPodProBadge,
-  ExclamationTriangle,
-  Plus,
-} from "@/icons"
+import { useProInstances, useProviders, useSettings } from "@/contexts"
+import { CheckCircle, CircleWithArrow, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
 import { exists, useLoginProModal, useReLoginProModal } from "@/lib"
 import { Routes } from "@/routes"
-import { TProID, TProInstance, TProInstances } from "@/types"
+import { TProID, TProInstance, TProInstances, TProviderConfig } from "@/types"
 import { useDeleteProviderModal } from "@/views/Providers/useDeleteProviderModal"
 import { ChevronDownIcon, CloseIcon } from "@chakra-ui/icons"
 import {
   Box,
   Button,
   ButtonGroup,
-  Divider,
   HStack,
   Heading,
   Icon,
@@ -39,11 +30,12 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { Dispatch, ReactElement, SetStateAction, useEffect, useState } from "react"
+import { Dispatch, ReactElement, SetStateAction, useEffect, useMemo, useState } from "react"
 import { HiArrowRightOnRectangle, HiClock } from "react-icons/hi2"
 import { useNavigate } from "react-router-dom"
 import { IconTag } from "../Tag"
 
+type TProInstanceWithProvider = TProInstance & Readonly<{ providerConfig: TProviderConfig | null }>
 export function ProSwitcher() {
   const [[proInstances]] = useProInstances()
   const { modal: loginProModal, handleOpenLogin: handleConnectClicked } = useLoginProModal()
@@ -54,7 +46,7 @@ export function ProSwitcher() {
   const handleAnnouncementClicked = () => {
     client.open("https://devpod.sh/pro")
   }
-  const { experimental_devPodPro, experimental_devPodProDesktop } = useSettings()
+  const { experimental_devPodPro } = useSettings()
   const isProUnauthenticated = proInstances?.some(({ authenticated }) => !authenticated)
   if (!experimental_devPodPro) {
     return (
@@ -83,20 +75,13 @@ export function ProSwitcher() {
         <Portal>
           <PopoverContent backgroundColor={backgroundColor} zIndex="popover">
             <PopoverArrow backgroundColor={backgroundColor} />
-            {experimental_devPodProDesktop ? (
-              <ProPopoverContent
-                proInstances={proInstances}
-                emptyProInstances={<EmptyProInstances onConnect={handleConnectClicked} />}
-              />
-            ) : (
-              <LegacyProPopoverContent
-                proInstances={proInstances}
-                onConnect={handleConnectClicked}
-                setIsDeleting={setIsDeleting}
-                onReLogin={(host) => handleReLoginClicked({ host })}
-                emptyProInstances={<EmptyProInstances onConnect={handleConnectClicked} />}
-              />
-            )}
+            <ProPopoverContent
+              proInstances={proInstances}
+              onConnect={handleConnectClicked}
+              setIsDeleting={setIsDeleting}
+              onReLogin={(host) => handleReLoginClicked({ host })}
+              emptyProInstances={<EmptyProInstances onConnect={handleConnectClicked} />}
+            />
           </PopoverContent>
         </Portal>
       </Popover>
@@ -109,76 +94,62 @@ export function ProSwitcher() {
 type TProPopoverContentProps = Readonly<{
   proInstances: TProInstances | undefined
   emptyProInstances: ReactElement
-}>
-function ProPopoverContent({ proInstances, emptyProInstances }: TProPopoverContentProps) {
-  const navigate = useNavigate()
-
-  return (
-    <>
-      <List>
-        {proInstances === undefined || proInstances.length === 0
-          ? emptyProInstances
-          : proInstances.map(({ host, authenticated }) => {
-              if (!host) {
-                return null
-              }
-
-              return (
-                <ListItem key={host}>
-                  <Button
-                    _hover={{ bg: "gray.100" }}
-                    variant="unstyled"
-                    w="full"
-                    px="4"
-                    h="12"
-                    onClick={() => navigate(Routes.toProInstance(host))}>
-                    <HStack w="full" justify="space-between">
-                      <Text maxW="50%" overflow="hidden" textOverflow="ellipsis">
-                        {host}
-                      </Text>
-                      <HStack>
-                        {authenticated != null && (
-                          <Box
-                            boxSize="2"
-                            bg={authenticated ? "green.400" : "orange.400"}
-                            rounded="full"
-                          />
-                        )}
-                        <Text fontSize="xs" fontWeight="normal">
-                          {host}
-                        </Text>
-                        <CircleWithArrow boxSize={5} />
-                      </HStack>
-                    </HStack>
-                  </Button>
-                </ListItem>
-              )
-            })}
-      </List>
-
-      <Divider />
-
-      <Button py="5" color="gray.700" variant="ghost" leftIcon={<Connect boxSize={4} />}>
-        Connect new platform
-      </Button>
-    </>
-  )
-}
-
-type TLegacyProPopoverContentProps = Readonly<{
-  proInstances: TProInstances | undefined
-  emptyProInstances: ReactElement
   setIsDeleting: Dispatch<SetStateAction<boolean>>
   onConnect: VoidFunction
   onReLogin: (host: string) => void
 }>
-function LegacyProPopoverContent({
+function ProPopoverContent({
   proInstances,
   emptyProInstances,
-  onConnect,
   setIsDeleting,
+  onConnect,
   onReLogin,
-}: TLegacyProPopoverContentProps) {
+}: TProPopoverContentProps) {
+  const navigate = useNavigate()
+  const [[providers]] = useProviders()
+  const { newProInstances, legacyProInstances } = useMemo(() => {
+    return (
+      proInstances
+        ?.map((instance) => {
+          if (!instance.provider) {
+            return { ...instance, providerConfig: null }
+          }
+          const providerConfig = providers?.[instance.provider]?.config
+          if (!providerConfig) {
+            return { ...instance, providerConfig: null }
+          }
+
+          return { ...instance, providerConfig }
+        })
+        .reduce(
+          (acc, curr) => {
+            if (!curr.providerConfig) {
+              acc.legacyProInstances.push(curr)
+
+              return acc
+            }
+            if (!curr.providerConfig.exec?.proxy?.["health"]) {
+              acc.legacyProInstances.push(curr)
+
+              return acc
+            }
+
+            acc.newProInstances.push(curr)
+
+            return acc
+          },
+          {
+            newProInstances: [] as TProInstanceWithProvider[],
+            legacyProInstances: [] as TProInstanceWithProvider[],
+          }
+        ) ?? {
+        newProInstances: [] as TProInstanceWithProvider[],
+        legacyProInstances: [] as TProInstanceWithProvider[],
+      }
+    )
+  }, [proInstances, providers])
+  // TODO: Filter pro instances by the ones that support health check
+
   return (
     <>
       <PopoverHeader>
@@ -202,33 +173,64 @@ function LegacyProPopoverContent({
         </ButtonGroup>
       </PopoverHeader>
       <PopoverBody>
-        <Box
-          width="full"
-          overflowY="auto"
-          maxHeight="17rem"
-          height="full"
-          marginTop="3"
-          marginBottom="2"
-          padding="1">
-          {proInstances === undefined || proInstances.length === 0
-            ? emptyProInstances
-            : proInstances.map((proInstance) => {
-                const host = proInstance.host
-                if (!host) {
-                  return null
-                }
+        <Box width="full" overflowY="auto" maxHeight="17rem" height="full" px="2">
+          {proInstances === undefined || (proInstances.length === 0 && emptyProInstances)}
+          {legacyProInstances.map((proInstance) => {
+            const host = proInstance.host
+            if (!host) {
+              return null
+            }
 
-                return (
-                  <ProInstanceRow
-                    key={host}
-                    {...proInstance}
-                    host={host}
-                    onIsDeletingChanged={setIsDeleting}
-                    onLoginClicked={() => onReLogin(host)}
-                  />
-                )
-              })}
+            return (
+              <ProInstanceRow
+                key={host}
+                {...proInstance}
+                host={host}
+                onIsDeletingChanged={setIsDeleting}
+                onLoginClicked={() => onReLogin(host)}
+              />
+            )
+          })}
         </Box>
+
+        <List>
+          {newProInstances.map(({ host, authenticated }) => {
+            if (!host) {
+              return null
+            }
+
+            return (
+              <ListItem key={host}>
+                <Button
+                  _hover={{ bg: "gray.100" }}
+                  variant="unstyled"
+                  w="full"
+                  px="4"
+                  h="12"
+                  onClick={() => navigate(Routes.toProInstance(host))}>
+                  <HStack w="full" justify="space-between">
+                    <Text maxW="50%" overflow="hidden" textOverflow="ellipsis">
+                      {host}
+                    </Text>
+                    <HStack>
+                      {authenticated != null && (
+                        <Box
+                          boxSize="2"
+                          bg={authenticated ? "green.400" : "orange.400"}
+                          rounded="full"
+                        />
+                      )}
+                      <Text fontSize="xs" fontWeight="normal">
+                        {host}
+                      </Text>
+                      <CircleWithArrow boxSize={5} />
+                    </HStack>
+                  </HStack>
+                </Button>
+              </ListItem>
+            )
+          })}
+        </List>
       </PopoverBody>
     </>
   )
@@ -305,16 +307,9 @@ function ProInstanceRow({
             )}
           </HStack>
           <HStack>
-            <IconTag
-              variant="ghost"
-              icon={<Briefcase />}
-              paddingInlineStart="0"
-              label="TODO"
-              // label={proInstanceWorkspaces.length.toString(10)}
-              // info={`${proInstanceWorkspaces.length} workspaces`}
-            />
             {exists(creationTimestamp) && (
               <IconTag
+                paddingInlineStart="0"
                 variant="ghost"
                 icon={<Icon as={HiClock} />}
                 label={dayjs(new Date(creationTimestamp)).format("MMM D, YY")}

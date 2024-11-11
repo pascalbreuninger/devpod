@@ -63,5 +63,7 @@ func NewProCmd(flags *flags.GlobalFlags, streamLogger *log.StreamLogger) *cobra.
 	proCmd.AddCommand(NewCreateWorkspaceCmd(globalFlags))
 	proCmd.AddCommand(NewUpdateWorkspaceCmd(globalFlags))
 	proCmd.AddCommand(NewCheckHealthCmd(globalFlags))
+	proCmd.AddCommand(NewCheckUpdateCmd(globalFlags))
+	proCmd.AddCommand(NewUpdateProviderCmd(globalFlags))
 	return proCmd
 }

@@ -74,6 +74,8 @@
     "store:allow-load",
     "store:default",
     "dialog:allow-save",
-    "dialog:default"
+    "dialog:default",
+    "log:default",
+    "log:allow-log"
   ]
 }

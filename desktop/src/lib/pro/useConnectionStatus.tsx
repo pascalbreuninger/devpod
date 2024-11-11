@@ -11,17 +11,22 @@ export function useConnectionStatus(): TConnectionStatus {
   const { data: connection, isLoading } = useQuery({
     queryKey: QueryKeys.connectionStatus(host),
     queryFn: async () => {
-      const res = await client.checkHealth()
-      let state: TConnectionStatus["state"] = "disconnected"
-      if (res.err) {
+      try {
+        const res = await client.checkHealth()
+        console.log(res)
+        let state: TConnectionStatus["state"] = "disconnected"
+        if (res.err) {
+          return { state }
+        }
+
+        if (res.val.healthy) {
+          state = "connected"
+        }
+
         return { state }
+      } catch {
+        return { state: "disconnected" as TConnectionStatus["state"] }
       }
-
-      if (res.val.healthy) {
-        state = "connected"
-      }
-
-      return { state }
     },
     refetchInterval: 5_000,
   })

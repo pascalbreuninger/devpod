@@ -61,10 +61,4 @@ func GetDevPodVersion(url string) (string, error) {
 	}
 
 	return version.DevPodVersion, nil
-	// make sure it starts with a v
-	if !strings.HasPrefix(version.DevPodVersion, "v") {
-		version.DevPodVersion = "v" + version.DevPodVersion
-	}
-
-	return version.DevPodVersion, nil
 }

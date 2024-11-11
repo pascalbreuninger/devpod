@@ -6,6 +6,7 @@ import {
   TProID,
   TProInstance,
   TPlatformVersionInfo,
+  TPlatformUpdateCheck,
 } from "@/types"
 import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
 import {
@@ -272,5 +273,35 @@ export class ProCommands {
     }
 
     return Return.Value(JSON.parse(result.val.stdout) as TPlatformVersionInfo)
+  }
+
+  static async CheckUpdate(id: TProID) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const args = [DEVPOD_COMMAND_PRO, "check-update", hostFlag]
+
+    const result = await ProCommands.newCommand(args).run()
+    if (result.err) {
+      return result
+    }
+    if (!isOk(result.val)) {
+      return getErrorFromChildProcess(result.val)
+    }
+
+    return Return.Value(JSON.parse(result.val.stdout) as TPlatformUpdateCheck)
+  }
+
+  static async Update(id: TProID, version: string) {
+    const hostFlag = toFlagArg(DEVPOD_FLAG_HOST, id)
+    const args = [DEVPOD_COMMAND_PRO, "update-provider", version, hostFlag]
+
+    const result = await ProCommands.newCommand(args).run()
+    if (result.err) {
+      return result
+    }
+    if (!isOk(result.val)) {
+      return getErrorFromChildProcess(result.val)
+    }
+
+    return Return.Value(JSON.parse(result.val.stdout) as TPlatformUpdateCheck)
   }
 }

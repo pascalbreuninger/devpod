@@ -33,6 +33,14 @@ export class ProClient implements TDebuggable {
     return ProCommands.GetVersion(this.id)
   }
 
+  public async checkUpdate() {
+    return ProCommands.CheckUpdate(this.id)
+  }
+
+  public async update(version: string) {
+    return ProCommands.Update(this.id, version)
+  }
+
   public async listProInstances(
     config?: TListProInstancesConfig
   ): Promise<Result<readonly TProInstance[]>> {
