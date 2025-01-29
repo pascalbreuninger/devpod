@@ -215,8 +215,9 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 			stdinReader,
 			stdoutWriter,
 			writer,
-			log.ErrorStreamOnly(),
-			wInfo.InjectTimeout)
+			wInfo.InjectTimeout,
+			cmd.Proxy,
+			log.ErrorStreamOnly())
 	}()
 
 	// create container etc.

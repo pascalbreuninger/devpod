@@ -99,8 +99,10 @@ func (c *ContainerTunnel) Run(ctx context.Context, handler Handler, cfg *config.
 			stdinReader,
 			stdoutWriter,
 			writer,
+			timeout,
+			c.proxy,
 			c.log.ErrorStreamOnly(),
-			timeout)
+		)
 	}()
 
 	// connect to container

@@ -7,9 +7,11 @@ import (
 	"os"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,6 +78,26 @@ func Clusters(ctx context.Context, client client.Client, projectName string) (*m
 		return clustersList, fmt.Errorf("list clusters: %w", err)
 	} else if len(clustersList.Runners) == 0 {
 		return clustersList, fmt.Errorf("seems like there is no runner allowed in project %s, please make sure to at least have a single runner available", projectName)
+	}
+
+	ns := project.ProjectNamespace(projectName)
+	virtualClusterList, err := managementClient.Loft().ManagementV1().VirtualClusterInstances(ns).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return clustersList, fmt.Errorf("list virtual clusters: %w", err)
+	}
+
+	for _, virtualCluster := range virtualClusterList.Items {
+		clustersList.Clusters = append(clustersList.Clusters, managementv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "vcluster-" + virtualCluster.GetName(),
+				UID:  virtualCluster.GetUID(),
+			},
+			Spec: managementv1.ClusterSpec{
+				ClusterSpec: storagev1.ClusterSpec{
+					DisplayName: virtualCluster.Spec.DisplayName,
+				},
+			},
+		})
 	}
 
 	return clustersList, nil

@@ -529,8 +529,9 @@ func (cmd *UpCmd) devPodUpMachine(
 			sshTunnelStdinReader,
 			sshTunnelStdoutWriter,
 			writer,
-			log.ErrorStreamOnly(),
 			wInfo.InjectTimeout,
+			cmd.Proxy,
+			log.ErrorStreamOnly(),
 		)
 	}
 

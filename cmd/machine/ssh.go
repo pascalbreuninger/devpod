@@ -93,8 +93,9 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 				stdin,
 				stdout,
 				stderr,
-				log.Default.ErrorStreamOnly(),
-				timeout)
+				timeout,
+				false,
+				log.Default.ErrorStreamOnly())
 		}, writer)
 }
 

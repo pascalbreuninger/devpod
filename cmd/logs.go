@@ -100,7 +100,9 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 			stdinReader,
 			stdoutWriter,
 			stderr,
-			log.ErrorStreamOnly(), timeout)
+			timeout,
+			false,
+			log.ErrorStreamOnly())
 	}()
 
 	// create agent command

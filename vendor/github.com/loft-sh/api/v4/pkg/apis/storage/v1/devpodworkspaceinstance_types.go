@@ -142,6 +142,9 @@ type RunnerRef struct {
 	// Runner is the connected runner the workspace will be created in
 	// +optional
 	Runner string `json:"runner,omitempty"`
+
+	// VirtualCluster is the name of a virtual cluster the workspace should be scheduled in
+	VirtualCluster string `json:"virtualCluster,omitempty"`
 }
 
 type EnvironmentRef struct {

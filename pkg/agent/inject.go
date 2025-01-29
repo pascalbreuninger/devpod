@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
@@ -41,8 +42,9 @@ func InjectAgent(
 		nil,
 		nil,
 		nil,
-		log,
 		timeout,
+		false,
+		log,
 	)
 }
 
@@ -57,8 +59,9 @@ func InjectAgentAndExecute(
 	stdin io.Reader,
 	stdout io.Writer,
 	stderr io.Writer,
-	log log.Logger,
 	timeout time.Duration,
+	proxy bool,
+	log log.Logger,
 ) error {
 	// should execute locally?
 	if local {
@@ -82,6 +85,16 @@ func InjectAgentAndExecute(
 	if version.GetVersion() == version.DevVersion {
 		preferDownload = false
 	}
+	if proxy {
+		preferDownload = false
+	}
+
+	// TODO: If we're running in proxy mode, prefer injecting
+	// This requires us to pre-populate devpod cache for this version
+	host, _ := os.Hostname()
+	log.Info("Inject Agent", host, "preferDownload", preferDownload, "proxy", proxy)
+	s := debug.Stack()
+	log.Info(string(s))
 
 	// install devpod into the target
 	// do a simple hello world to check if we can get something
@@ -162,6 +175,8 @@ func injectBinary(arm bool, tryDownloadURL string, log log.Logger) (io.ReadClose
 			binaryPath = ""
 		}
 	}
+
+	// TODO: Try to find binary in runner cache
 
 	// download devpod locally
 	if binaryPath == "" {
