@@ -108,7 +108,7 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
-	sshCmd.Flags().DurationVar(&cmd.SSHKeepAliveInterval, "ssh-keepalive-interval", 55*time.Second, "How often should keepalive request be made (55s)")
+	sshCmd.Flags().DurationVar(&cmd.SSHKeepAliveInterval, "ssh-keepalive-interval", 15*time.Second, "How often should keepalive request be made (55s)")
 
 	return sshCmd
 }
@@ -205,27 +205,34 @@ func (cmd *SSHCmd) jumpContainerTailscale(
 		}()
 	}
 
+	cancelCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	if cmd.SSHKeepAliveInterval != DisableSSHKeepAlive {
+		go func() {
+			err := startSSHKeepAlive(ctx, toolSSHClient, cmd.SSHKeepAliveInterval, log)
+			if err != nil {
+				cancel(err)
+			}
+		}()
+	}
+
 	// Handle GPG agent forwarding
 	if cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
 		if gpg.IsGpgTunnelRunning(cmd.User, ctx, toolSSHClient, log) {
 			log.Debugf("[GPG] exporting already running, skipping")
-		} else if err := cmd.setupGPGAgent(ctx, toolSSHClient, log); err != nil {
+		} else if err := cmd.setupGPGAgent(cancelCtx, toolSSHClient, log); err != nil {
 			return err
 		}
 	}
 
 	// Handle ssh stdio mode
 	if cmd.Stdio {
-		if cmd.SSHKeepAliveInterval != DisableSSHKeepAlive {
-			go startSSHKeepAlive(ctx, toolSSHClient, cmd.SSHKeepAliveInterval, log)
-		}
-
-		return client.DirectTunnel(ctx, os.Stdin, os.Stdout)
+		return client.DirectTunnel(cancelCtx, os.Stdin, os.Stdout)
 	}
 
 	// Connect to the inner server and handle user session
 	return machine.RunSSHSession(
-		ctx,
+		cancelCtx,
 		sshClient,
 		cmd.AgentForwarding,
 		cmd.Command,
@@ -648,18 +655,28 @@ func (cmd *SSHCmd) setupGPGAgent(
 	return nil
 }
 
-func startSSHKeepAlive(ctx context.Context, client *ssh.Client, interval time.Duration, log log.Logger) {
+func startSSHKeepAlive(ctx context.Context, client *ssh.Client, interval time.Duration, log log.Logger) error {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
+	consecutiveFailures := 0
+	maxConsecutiveFailures := 3
 
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-ticker.C:
 			_, _, err := client.SendRequest("keepalive@openssh.com", true, nil)
 			if err != nil {
-				log.Errorf("Failed to send keepalive: %w", err)
+				consecutiveFailures++
+				log.Warnf("Failed to send keepalive (%d/%d): %v", consecutiveFailures, maxConsecutiveFailures, err)
+
+				if consecutiveFailures >= maxConsecutiveFailures {
+					return fmt.Errorf("failed to send keepalive: %w", err)
+				}
+			} else {
+				consecutiveFailures = 0
 			}
 		}
 	}
